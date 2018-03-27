@@ -1,6 +1,6 @@
 # gql-generator
 
-Generate queries from graphql schema, used for test;
+Generate queries from graphql schema, used for writing api test.
 
 ## Usage
 ```bash
