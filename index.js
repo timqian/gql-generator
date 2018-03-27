@@ -204,8 +204,7 @@ if(gqlSchema.getMutationType()) {
         mutationsIndexJs += `module.exports.${mutationType} = fs.readFileSync(path.join(__dirname, '${mutationType}.gql'), 'utf8');\n`;
     });
     fs.writeFileSync(path.join(mutationsFolder, 'index.js'), mutationsIndexJs);
-    indexJsExportAll += `module.exports.mutations = require('./mutations');
-`
+    indexJsExportAll += `module.exports.mutations = require('./mutations');\n`;
 } else {
     console.log('[gqlg warning]:', 'No mutation type found in your schema');
 }
@@ -218,7 +217,7 @@ if(gqlSchema.getQueryType()) {
         queriesIndexJs += `module.exports.${queryType} = fs.readFileSync(path.join(__dirname, '${queryType}.gql'), 'utf8');\n`;
     });
     fs.writeFileSync(path.join(queriesFolder, 'index.js'), queriesIndexJs);
-    indexJsExportAll += `module.exports.queries = require('./queries');`
+    indexJsExportAll += `module.exports.queries = require('./queries');\n`;
 } else {
     console.log('[gqlg warning]:', 'No query type found in your schema');
 }
@@ -231,7 +230,7 @@ if(gqlSchema.getSubscriptionType()) {
         subscriptionsIndexJs += `module.exports.${subscriptionType} = fs.readFileSync(path.join(__dirname, '${subscriptionType}.gql'), 'utf8');\n`;
     });
     fs.writeFileSync(path.join(subscriptionsFolder, 'index.js'), subscriptionsIndexJs);
-    indexJsExportAll += `module.exports.subscriptions = require('./subscriptions');`
+    indexJsExportAll += `module.exports.subscriptions = require('./subscriptions');\n`;
 } else {
     console.log('[gqlg warning]:', 'No subscription type found in your schema');
 }
