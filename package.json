@@ -1,0 +1,36 @@
+{
+  "name": "gql-generator",
+  "version": "1.0.1",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "gqlg": "index.js"
+  },
+  "scripts": {
+    "test": "mocha -u qunit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timqian/gql-generator.git"
+  },
+  "keywords": [
+    "graphql",
+    "query",
+    "generator"
+  ],
+  "author": "timqian",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/timqian/gql-generator/issues"
+  },
+  "homepage": "https://github.com/timqian/gql-generator#readme",
+  "dependencies": {
+    "commander": "^2.15.1",
+    "del": "^3.0.0",
+    "graphql": "^0.13.2"
+  },
+  "devDependencies": {
+    "mocha": "^5.0.5",
+    "should": "^13.2.1"
+  }
+}
