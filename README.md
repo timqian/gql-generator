@@ -7,6 +7,9 @@ Generate queries from graphql schema, used for test;
 # Install
 npm install gql-generator -g
 
+# see the usage
+gqlg --help
+
 # Generate sample queries from typeDefs
 gqlg --schemaFilePath ./example/sampleTypeDef.graphql --destDirPath ./example/output
 ```
