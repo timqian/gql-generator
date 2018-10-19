@@ -1,13 +1,14 @@
 {
   "name": "gql-generator",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "",
   "main": "index.js",
   "bin": {
     "gqlg": "index.js"
   },
   "scripts": {
-    "test": "mocha -u qunit"
+    "test": "mocha -u qunit",
+    "lint": "./node_modules/.bin/eslint ./src"
   },
   "repository": {
     "type": "git",
@@ -31,6 +32,9 @@
   },
   "devDependencies": {
     "mocha": "^5.0.5",
-    "should": "^13.2.1"
+    "should": "^13.2.1",
+    "eslint": "^5.5.0",
+    "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-plugin-import": "^2.14.0"
   }
 }
