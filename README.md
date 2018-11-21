@@ -155,3 +155,6 @@ test('signup', async () => {
 ## Notice
 
 As this tool is used for test, it expends all the fields in a query. And as we know, there might be recursive field in the query. So `gqlg` ignores the types which has been added in the parent queries already.
+
+
+> [Donate with bitcoin](https://getcryptoo.github.io/)
