@@ -38,7 +38,7 @@ npm install gql-generator -g
 gqlg --help
 
 # Generate sample queries from schema file
-gqlg --schemaFilePath ./example/sampleTypeDef.graphql --destDirPath ./example/output
+gqlg --schemaFilePath ./example/sampleTypeDef.graphql --destDirPath ./example/output --depthLimit 5
 ```
 
 Now the queries generated from the [`sampleTypeDef.graphql`](./example/sampleTypeDef.graphql) can be found in the destDir: [`./example/output`](./example/output).

@@ -8,7 +8,7 @@ const del = require('del');
 program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
-  .option('--depthLimit [value]', 'depth you want to limit(The default is 100)')
+  .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
   .parse(process.argv);
 
 const { schemaFilePath, destDirPath, depthLimit = 100 } = program;
