@@ -8,10 +8,10 @@ const del = require('del');
 program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
-  .option('--depthLimit [value]', 'depth you want to limit')
+  .option('--depthLimit [value]', 'depth you want to limit(The default is 100)')
   .parse(process.argv);
 
-const { schemaFilePath, destDirPath, depthLimit = 10 } = program;
+const { schemaFilePath, destDirPath, depthLimit = 100 } = program;
 const typeDef = fs.readFileSync(schemaFilePath);
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
@@ -27,6 +27,14 @@ pathArr.forEach((i) => {
 });
 let indexJsExportAll = '';
 
+/**
+ * Generate the query for the specified field
+ * @param curName name of the current field
+ * @param curParentType parent type of the current field
+ * @param curParentName parent name of the current field
+ * @param crossReferenceKeyList list of the cross reference
+ * @param level parent name of the current field
+ */
 const generateQuery = (
   curName,
   curParentType,
@@ -61,6 +69,11 @@ const generateQuery = (
   return fieldStr;
 };
 
+/**
+ * Generate the query for the specified field
+ * @param obj one of the root objects(Query, Mutation, Subscription)
+ * @param description description of the current object
+ */
 const generateFile = (obj, description) => {
   let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\r';
   const writeFolder = path.join(destDirPath, `./${description.toLowerCase()}`);
@@ -94,5 +107,4 @@ if (gqlSchema.getSubscriptionType()) {
 } else {
   console.log('[gqlg warning]:', 'No subscription type found in your schema');
 }
-
 fs.writeFileSync(path.join(destDirPath, 'index.js'), indexJsExportAll);
