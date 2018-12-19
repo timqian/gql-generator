@@ -17,14 +17,13 @@ const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
 
 del.sync(destDirPath);
-const pathArr = destDirPath.split('/');
-let pathTmp = __dirname;
-pathArr.forEach((i) => {
-  pathTmp += `/${i}`;
+path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
+  const pathTmp = path.join(before, cur + path.sep);
   if (!fs.existsSync(pathTmp)) {
     fs.mkdirSync(pathTmp);
   }
-});
+  return path.join(before, cur + path.sep);
+}, '');
 let indexJsExportAll = '';
 
 /**
@@ -58,6 +57,7 @@ const generateQuery = (
     crossReferenceKeyList.push(crossReferenceKey);
     const childQuery = Object.keys(curType.getFields())
       .map(cur => generateQuery(cur, curType, curName, crossReferenceKeyList, curDepth + 1))
+      .filter(cur => cur)
       .join('\n');
     queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
   }
