@@ -33,40 +33,40 @@ let indexJsExportAll = '';
  * @param curParentType parent type of the current field
  * @param curParentName parent name of the current field
  * @param crossReferenceKeyList list of the cross reference
- * @param level parent name of the current field
+ * @param curDepth currentl depth of field
  */
 const generateQuery = (
   curName,
   curParentType,
   curParentName,
-  crossReferenceKeyList = [],
-  level = 1,
+  crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
+  curDepth = 1,
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
   const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
-  let fieldStr = '    '.repeat(level) + field.name;
+  let queryStr = '    '.repeat(curDepth) + field.name;
   if (field.args.length > 0) {
     const argsList = field.args
       .reduce((acc, cur) => `${acc}, ${cur.name}: $${cur.name}`, '')
-      .substring(2);
-    fieldStr += `(${argsList})`;
+      .substring(2); // FIXME
+    queryStr += `(${argsList})`;
   }
   const curType = gqlSchema.getType(curTypeName);
   if (curType.getFields) {
     const crossReferenceKey = `${curParentName}To${curName}Key`;
-    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || level > depthLimit) {
+    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) {
       return '';
     }
     crossReferenceKeyList.push(crossReferenceKey);
     const childQuery = Object.keys(curType.getFields())
       .reduce((acc, cur) => {
-        const childData = generateQuery(cur, curType, curName, crossReferenceKeyList, level + 1);
+        const childData = generateQuery(cur, curType, curName, crossReferenceKeyList, curDepth + 1);
         return childData ? `${acc}\n${childData}` : acc;
       }, '')
-      .substring(1);
-    fieldStr += `{\n${childQuery}\n${'    '.repeat(level)}}`;
+      .substring(1); // FIXME
+    queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`; // FIXME
   }
-  return fieldStr;
+  return queryStr;
 };
 
 /**
@@ -75,7 +75,7 @@ const generateQuery = (
  * @param description description of the current object
  */
 const generateFile = (obj, description) => {
-  let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\r';
+  let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\r'; // FIXME
   const writeFolder = path.join(destDirPath, `./${description.toLowerCase()}`);
   fs.mkdirSync(writeFolder);
   Object.keys(obj).forEach((type) => {
@@ -107,4 +107,5 @@ if (gqlSchema.getSubscriptionType()) {
 } else {
   console.log('[gqlg warning]:', 'No subscription type found in your schema');
 }
+
 fs.writeFileSync(path.join(destDirPath, 'index.js'), indexJsExportAll);

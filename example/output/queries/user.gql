@@ -1,8 +1,0 @@
-query user($id: Int!){
-    user(id: $id){
-        id
-        username
-        email
-        createdAt
-    }
-}
