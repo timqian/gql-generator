@@ -47,24 +47,19 @@ const generateQuery = (
   let queryStr = '    '.repeat(curDepth) + field.name;
   if (field.args.length > 0) {
     const argsList = field.args
-      .reduce((acc, cur) => `${acc}, ${cur.name}: $${cur.name}`, '')
-      .substring(2); // FIXME
+      .map(arg => `${arg.name}: $${arg.name}`)
+      .join(', ');
     queryStr += `(${argsList})`;
   }
   const curType = gqlSchema.getType(curTypeName);
   if (curType.getFields) {
     const crossReferenceKey = `${curParentName}To${curName}Key`;
-    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) {
-      return '';
-    }
+    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) return '';
     crossReferenceKeyList.push(crossReferenceKey);
     const childQuery = Object.keys(curType.getFields())
-      .reduce((acc, cur) => {
-        const childData = generateQuery(cur, curType, curName, crossReferenceKeyList, curDepth + 1);
-        return childData ? `${acc}\n${childData}` : acc;
-      }, '')
-      .substring(1); // FIXME
-    queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`; // FIXME
+      .map(cur => generateQuery(cur, curType, curName, crossReferenceKeyList, curDepth + 1))
+      .join('\n');
+    queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
   }
   return queryStr;
 };
@@ -75,8 +70,22 @@ const generateQuery = (
  * @param description description of the current object
  */
 const generateFile = (obj, description) => {
-  let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\r'; // FIXME
-  const writeFolder = path.join(destDirPath, `./${description.toLowerCase()}`);
+  let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
+  let outputFolderName;
+  switch (description) {
+    case 'Mutation':
+      outputFolderName = 'mutations';
+      break;
+    case 'Query':
+      outputFolderName = 'queries';
+      break;
+    case 'Subscription':
+      outputFolderName = 'subscriptions';
+      break;
+    default:
+      console.log('[gqlg warning]:', 'description is required');
+  }
+  const writeFolder = path.join(destDirPath, `./${outputFolderName}`);
   fs.mkdirSync(writeFolder);
   Object.keys(obj).forEach((type) => {
     let query = generateQuery(type, description);
@@ -87,7 +96,7 @@ const generateFile = (obj, description) => {
     indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
   });
   fs.writeFileSync(path.join(writeFolder, 'index.js'), indexJs);
-  indexJsExportAll += `module.exports.${description.toLowerCase()} = require('./${description.toLowerCase()}');\n`;
+  indexJsExportAll += `module.exports.${outputFolderName} = require('./${outputFolderName}');\n`;
 };
 
 if (gqlSchema.getMutationType()) {
