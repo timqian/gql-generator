@@ -1,3 +1,7 @@
+# output files of test
+example/output
+example/output2
+
 # Logs
 logs
 *.log
@@ -56,4 +60,7 @@ typings/
 
 # dotenv environment variables file
 .env
+
+# webstorm settings
+.idea
 

@@ -12,8 +12,12 @@ type Mutation {
     signin(
         email: String!
         password: String!
-    ): UserToken!
+    ): String!
 
+}
+
+type Subscription {
+    UserUpdated(UserId: Int!): User
 }
 
 type UserToken {
