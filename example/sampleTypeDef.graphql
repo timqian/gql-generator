@@ -30,5 +30,21 @@ type User {
     username: String!
     email: String!
     createdAt: String!
+    context: Context!
+    details: UserDetails!
 }
 
+union UserDetails = Guest | Member
+
+type Guest {
+    region: String!
+}
+
+type Member {
+    address: String!
+}
+
+type Context {
+    user: User! # Circular ref
+    domain: String!
+}

@@ -31,6 +31,7 @@ let indexJsExportAll = '';
  * @param curName name of the current field
  * @param curParentType parent type of the current field
  * @param curParentName parent name of the current field
+ * @param argumentList list of arguments from all fields
  * @param crossReferenceKeyList list of the cross reference
  * @param curDepth currentl depth of field
  */
@@ -38,30 +39,64 @@ const generateQuery = (
   curName,
   curParentType,
   curParentName,
+  argumentList = [],
   crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
   curDepth = 1,
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
   const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
-  let queryStr = '    '.repeat(curDepth) + field.name;
-  if (field.args.length > 0) {
-    const argsList = field.args
-      .map(arg => `${arg.name}: $${arg.name}`)
-      .join(', ');
-    queryStr += `(${argsList})`;
-  }
   const curType = gqlSchema.getType(curTypeName);
+  let queryStr = '';
+  let childQuery = '';
+
   if (curType.getFields) {
     const crossReferenceKey = `${curParentName}To${curName}Key`;
     if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) return '';
     crossReferenceKeyList.push(crossReferenceKey);
-    const childQuery = Object.keys(curType.getFields())
-      .map(cur => generateQuery(cur, curType, curName, crossReferenceKeyList, curDepth + 1))
+    const childKeys = Object.keys(curType.getFields());
+    childQuery = childKeys
+      .map(cur =>
+        generateQuery(cur, curType, curName, argumentList, crossReferenceKeyList, curDepth + 1).queryStr
+      )
       .filter(cur => cur)
       .join('\n');
-    queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
   }
-  return queryStr;
+
+  if (!(curType.getFields && !childQuery)) {
+    queryStr = `${'    '.repeat(curDepth)}${field.name}`;
+    if (field.args.length > 0) {
+      argumentList.push(...field.args);
+      const argsStr = field.args.map(arg => `${arg.name}: $${arg.name}`).join(', ');
+      queryStr += `(${argsStr})`;
+    }
+    if (childQuery) {
+      queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
+    }
+  }
+
+  /* Union types */
+  if (curType.astNode && curType.astNode.kind === 'UnionTypeDefinition') {
+    const types = curType._types;
+    if (types && types.length) {
+      const indent = `${'    '.repeat(curDepth)}`;
+      const fragIndent = `${'    '.repeat(curDepth + 1)}`;
+      queryStr += `{\n`;
+
+      for (let i = 0, len = types.length; i < len; i++) {
+        const valueTypeName = types[i];
+        const valueType = gqlSchema.getType(valueTypeName);
+        const childQuery = Object.keys(valueType.getFields())
+          .map(cur =>
+            generateQuery(cur, valueType, curName, argumentList, crossReferenceKeyList, curDepth + 2).queryStr
+          )
+          .filter(cur => cur)
+          .join('\n');
+            queryStr += `${fragIndent}... on ${valueTypeName} {\n${childQuery}\n${fragIndent}}\n`;
+          }
+          queryStr += `${indent}}`;
+      }
+  }
+  return { queryStr, argumentList };
 };
 
 /**
@@ -88,9 +123,14 @@ const generateFile = (obj, description) => {
   const writeFolder = path.join(destDirPath, `./${outputFolderName}`);
   fs.mkdirSync(writeFolder);
   Object.keys(obj).forEach((type) => {
-    let query = generateQuery(type, description);
+    const queryResult = generateQuery(type, description);
+    let query = queryResult.queryStr;
     const field = gqlSchema.getType(description).getFields()[type];
-    const argStr = field.args.map(arg => `$${arg.name}: ${arg.type}`).join(', ');
+    const args = field.args.concat(queryResult.argumentList);
+    const argStr = args
+      .filter((item, pos) => args.indexOf(item) == pos)
+      .map(arg => `$${arg.name}: ${arg.type}`)
+      .join(', ');
     query = `${description.toLowerCase()} ${type}${argStr ? `(${argStr})` : ''}{\n${query}\n}`;
     fs.writeFileSync(path.join(writeFolder, `./${type}.gql`), query);
     indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
