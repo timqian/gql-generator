@@ -14,6 +14,20 @@ type Mutation {
         password: String!
     ): String!
 
+    setConfig(
+        prefs: PrefsInput
+    ): Config!
+}
+
+input PrefsInput {
+    language: String!
+}
+
+type Config {
+    language: String!
+    level(domain: String!): Int!
+    lastSeen(domain: String!): Int!
+    theme(domain: String!): Int!
 }
 
 type Subscription {
