@@ -1,7 +1,6 @@
 {
   "name": "gql-generator",
-  "version": "1.0.8",
-  "description": "",
+  "version": "1.0.7",  "description": "",
   "main": "index.js",
   "bin": {
     "gqlg": "index.js"
