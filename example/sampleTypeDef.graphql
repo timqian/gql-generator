@@ -14,6 +14,19 @@ type Mutation {
         password: String!
     ): String!
 
+    setConfig(
+        prefs: PrefsInput
+    ): Config!
+}
+
+input PrefsInput {
+    language: String!
+}
+
+type Config {
+    language: String!
+    level(domain: String!): Int!
+    lastSeen(domain: String!): Int!
 }
 
 type Subscription {
@@ -30,5 +43,21 @@ type User {
     username: String!
     email: String!
     createdAt: String!
+    context: Context!
+    details: UserDetails!
 }
 
+union UserDetails = Guest | Member
+
+type Guest {
+    region: String!
+}
+
+type Member {
+    address: String!
+}
+
+type Context {
+    user: User! # Circular ref
+    domain: String!
+}
