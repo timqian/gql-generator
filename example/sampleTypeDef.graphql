@@ -14,19 +14,6 @@ type Mutation {
         password: String!
     ): String!
 
-    setConfig(
-        prefs: PrefsInput
-    ): Config!
-}
-
-input PrefsInput {
-    language: String!
-}
-
-type Config {
-    language: String!
-    level(domain: String!): Int!
-    lastSeen(domain: String!): Int!
 }
 
 type Subscription {
@@ -50,7 +37,7 @@ type User {
 union UserDetails = Guest | Member
 
 type Guest {
-    region: String!
+    region(language: String): String!
 }
 
 type Member {

@@ -2,7 +2,8 @@
     "extends": ["airbnb-base"],
     "rules": {
       "no-console": "off",
-      "global-require": "off"
+      "global-require": "off",
+      "no-plusplus": "off"
     },
     "env": {
       "mocha": true

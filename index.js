@@ -31,7 +31,7 @@ let indexJsExportAll = '';
  * @param curName name of the current field
  * @param curParentType parent type of the current field
  * @param curParentName parent name of the current field
- * @param argumentsDict dictionary of arguments from all fields
+ * @param argumentList list of arguments from all fields
  * @param crossReferenceKeyList list of the cross reference
  * @param curDepth currentl depth of field
  */
@@ -39,7 +39,7 @@ const generateQuery = (
   curName,
   curParentType,
   curParentName,
-  argumentsDict = {},
+  argumentList = [],
   crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
   curDepth = 1,
 ) => {
@@ -55,9 +55,9 @@ const generateQuery = (
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
     childQuery = childKeys
-      .map(cur =>
-        generateQuery(cur, curType, curName, argumentsDict, crossReferenceKeyList, curDepth + 1).queryStr
-      )
+      .map(cur => generateQuery(
+        cur, curType, curName, argumentList, crossReferenceKeyList, curDepth + 1,
+      ).queryStr)
       .filter(cur => cur)
       .join('\n');
   }
@@ -65,10 +65,9 @@ const generateQuery = (
   if (!(curType.getFields && !childQuery)) {
     queryStr = `${'    '.repeat(curDepth)}${field.name}`;
     if (field.args.length > 0) {
-      const dict = getArgsDict(field);
-      Object.assign(argumentsDict, dict);
-      const argsToVarsStr = getArgsToVarsStr(dict);
-      queryStr += `(${argsToVarsStr})`;
+      argumentList.push(...field.args);
+      const argsStr = field.args.map(arg => `${arg.name}: $${arg.name}`).join(', ');
+      queryStr += `(${argsStr})`;
     }
     if (childQuery) {
       queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
@@ -77,27 +76,27 @@ const generateQuery = (
 
   /* Union types */
   if (curType.astNode && curType.astNode.kind === 'UnionTypeDefinition') {
-    const types = curType._types;
+    const types = curType.getTypes();
     if (types && types.length) {
       const indent = `${'    '.repeat(curDepth)}`;
       const fragIndent = `${'    '.repeat(curDepth + 1)}`;
-      queryStr += `{\n`;
+      queryStr += '{\n';
 
       for (let i = 0, len = types.length; i < len; i++) {
         const valueTypeName = types[i];
         const valueType = gqlSchema.getType(valueTypeName);
-        const childQuery = Object.keys(valueType.getFields())
-          .map(cur =>
-            generateQuery(cur, valueType, curName, argumentsDict, crossReferenceKeyList, curDepth + 2).queryStr
-          )
+        const unionChildQuery = Object.keys(valueType.getFields())
+          .map(cur => generateQuery(
+            cur, valueType, curName, argumentList, crossReferenceKeyList, curDepth + 2,
+          ).queryStr)
           .filter(cur => cur)
           .join('\n');
-            queryStr += `${fragIndent}... on ${valueTypeName} {\n${childQuery}\n${fragIndent}}\n`;
-          }
-          queryStr += `${indent}}`;
+        queryStr += `${fragIndent}... on ${valueTypeName} {\n${unionChildQuery}\n${fragIndent}}\n`;
       }
+      queryStr += `${indent}}`;
+    }
   }
-  return { queryStr, argumentsDict };
+  return { queryStr, argumentList };
 };
 
 /**
@@ -127,36 +126,18 @@ const generateFile = (obj, description) => {
     const queryResult = generateQuery(type, description);
     let query = queryResult.queryStr;
     const field = gqlSchema.getType(description).getFields()[type];
-    const varsToTypesStr = getVarsToTypesStr({
-        ...getArgsDict(field),
-        ...queryResult.argumentsDict
-    });
-    query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
+    const args = field.args.concat(queryResult.argumentList);
+    const argStr = args
+      .filter((item, pos) => args.indexOf(item) === pos)
+      .map(arg => `$${arg.name}: ${arg.type}`)
+      .join(', ');
+    query = `${description.toLowerCase()} ${type}${argStr ? `(${argStr})` : ''}{\n${query}\n}`;
     fs.writeFileSync(path.join(writeFolder, `./${type}.gql`), query);
     indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
   });
   fs.writeFileSync(path.join(writeFolder, 'index.js'), indexJs);
   indexJsExportAll += `module.exports.${outputFolderName} = require('./${outputFolderName}');\n`;
 };
-
-function getArgsDict(field) {
-  return field.args.reduce((o, arg) => {
-      o[`${field.name}_${arg.name}`] = arg;
-      return o;
-  }, {});
-}
-
-function getArgsToVarsStr(dict) {
-  return Object.entries(dict)
-    .map(([ varName, arg ]) => `${arg.name}: $${varName}`)
-    .join(', ');
-}
-
-function getVarsToTypesStr(dict) {
-  return Object.entries(dict)
-    .map(([ varName, arg ]) => `$${varName}: ${arg.type}`)
-    .join(', ');
-}
 
 if (gqlSchema.getMutationType()) {
   generateFile(gqlSchema.getMutationType().getFields(), 'Mutation');
