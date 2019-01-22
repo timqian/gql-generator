@@ -132,11 +132,11 @@ const generateFile = (obj, description) => {
       .map(arg => `$${arg.name}: ${arg.type}`)
       .join(', ');
     query = `${description.toLowerCase()} ${type}${argStr ? `(${argStr})` : ''}{\n${query}\n}`;
-    fs.writeFileSync(path.join(writeFolder, `./${type}.gql`), query);
-    indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
+    fs.writeFileSync(path.join(writeFolder, `./${type}.graphql`), query);
+    indexJs += `export const ${type} = fs.readFileSync(path.join(__dirname, '${type}.graphql'), 'utf8');\n`;
   });
-  fs.writeFileSync(path.join(writeFolder, 'index.js'), indexJs);
-  indexJsExportAll += `module.exports.${outputFolderName} = require('./${outputFolderName}');\n`;
+  fs.writeFileSync(path.join(writeFolder, 'index.ts'), indexJs);
+  indexJsExportAll += `export const ${outputFolderName} = require('./${outputFolderName}');\n`;
 };
 
 if (gqlSchema.getMutationType()) {
@@ -157,4 +157,4 @@ if (gqlSchema.getSubscriptionType()) {
   console.log('[gqlg warning]:', 'No subscription type found in your schema');
 }
 
-fs.writeFileSync(path.join(destDirPath, 'index.js'), indexJsExportAll);
+fs.writeFileSync(path.join(destDirPath, 'index.ts'), indexJsExportAll);
