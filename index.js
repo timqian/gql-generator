@@ -105,7 +105,7 @@ const generateQuery = (
  * @param description description of the current object
  */
 const generateFile = (obj, description) => {
-  let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
+  let indexJs = 'import gql from "graphql-tag";\nconst fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
   let outputFolderName;
   switch (description) {
     case 'Mutation':
@@ -133,7 +133,7 @@ const generateFile = (obj, description) => {
       .join(', ');
     query = `${description.toLowerCase()} ${type}${argStr ? `(${argStr})` : ''}{\n${query}\n}`;
     fs.writeFileSync(path.join(writeFolder, `./${type}.graphql`), query);
-    indexJs += `export const ${type} = fs.readFileSync(path.join(__dirname, '${type}.graphql'), 'utf8');\n`;
+    indexJs += `export const ${type} = gql\`$\{fs.readFileSync(path.join(__dirname, '${type}.graphql'), 'utf8')}\`;\n`;
   });
   fs.writeFileSync(path.join(writeFolder, 'index.ts'), indexJs);
   indexJsExportAll += `export const ${outputFolderName} = require('./${outputFolderName}');\n`;
