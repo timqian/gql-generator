@@ -5,13 +5,13 @@ import {NormalizedCacheObject} from "apollo-cache-inmemory";
 import {
 {{name}},{{#if hasVariables}}
 {{name}}Variables{{/if}}
-} from "../../../../__generated__/{{name}}";
+} from "./{{name}}";
 {{/each}}
 {{#each mutations}}
 import {
 {{name}},
 {{#if hasVariables}}{{name}}Variables{{/if}}
-} from "../../../../__generated__/{{name}}";
+} from "./{{name}}";
 {{/each}}
 
 {{#if mutations.length }}
