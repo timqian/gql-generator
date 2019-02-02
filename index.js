@@ -24,7 +24,6 @@ path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
   }
   return path.join(before, cur + path.sep);
 }, '');
-let indexJsExportAll = '';
 
 /**
  * Generate the query for the specified field
@@ -99,6 +98,12 @@ const generateQuery = (
   return { queryStr, argumentList };
 };
 
+
+// const templateContextOld = { mutations: [{ name: 'StaticPageUpdateName', hasVariables: true }, { name: 'StaticPageRemove', hasVariables: true }, { name: 'StaticPageAdd', hasVariables: true }], queries: [{ name: 'StaticPages', hasVariables: false }], subscriptions: [] };
+
+const templateContext = { mutations: [], queries: [] };
+
+
 /**
  * Generate the query for the specified field
  * @param obj one of the root objects(Query, Mutation, Subscription)
@@ -134,9 +139,9 @@ const generateFile = (obj, description) => {
     query = `${description.toLowerCase()} ${type}${argStr ? `(${argStr})` : ''}{\n${query}\n}`;
     fs.writeFileSync(path.join(writeFolder, `./${type}.graphql`), query);
     indexJs += `export const ${type} = gql\`$\{fs.readFileSync(path.join(__dirname, '${type}.graphql'), 'utf8')}\`;\n`;
+    templateContext[outputFolderName].push({ name: type, hasVariables: !!argStr });
   });
   fs.writeFileSync(path.join(writeFolder, 'index.ts'), indexJs);
-  indexJsExportAll += `export const ${outputFolderName} = require('./${outputFolderName}');\n`;
 };
 
 if (gqlSchema.getMutationType()) {
@@ -156,5 +161,10 @@ if (gqlSchema.getSubscriptionType()) {
 } else {
   console.log('[gqlg warning]:', 'No subscription type found in your schema');
 }
+const Handlebars = require('handlebars');
 
-fs.writeFileSync(path.join(destDirPath, 'index.ts'), indexJsExportAll);
+const rootTemplate = fs.readFileSync(path.join(__dirname, './root.handlebars'), 'utf8');
+
+const generateIndex = () => Handlebars.compile(rootTemplate)(templateContext);
+
+fs.writeFileSync(path.join(destDirPath, 'index.ts'), generateIndex());

@@ -1,0 +1,42 @@
+import {ApolloClient} from "apollo-client";
+import {NormalizedCacheObject} from "apollo-cache-inmemory";
+
+{{#each queries}}
+import {
+{{name}},{{#if hasVariables}}
+{{name}}Variables{{/if}}
+} from "../../../../__generated__/{{name}}";
+{{/each}}
+{{#each mutations}}
+import {
+{{name}},
+{{#if hasVariables}}{{name}}Variables{{/if}}
+} from "../../../../__generated__/{{name}}";
+{{/each}}
+
+{{#if mutations.length }}
+    import * as mutations from "./mutations";
+{{/if}}
+{{#if queries.length}}
+    import * as queries from "./queries";
+{{/if}}
+export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>) => ({
+    mutations: {
+    {{#each mutations}}
+        {{name}}: {{#if hasVariables}}(variables: {{name}}Variables){{else}}(){{/if}} =>
+            passedClient.mutate<{{name}}{{#if hasVariables}}, {{name}}Variables{{/if}}>({
+                mutation: mutations.{{name}}{{#if hasVariables}},
+                variables{{/if}}
+            }),
+    {{/each}}
+    },
+    queries: {
+    {{#each queries}}
+        {{name}}: {{#if hasVariables}}(variables: {{name}}Variables){{else}}(){{/if}} =>
+            passedClient.query<{{name}}{{#if hasVariables}}, {{name}}Variables{{/if}}>({
+                query: queries.{{name}}{{#if hasVariables}},
+                variables{{/if}}
+            }),
+    {{/each}}
+    }
+});
