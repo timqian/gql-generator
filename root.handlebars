@@ -13,12 +13,21 @@ import {
 {{#if hasVariables}}{{name}}Variables{{/if}}
 } from "./{{name}}";
 {{/each}}
+{{#each subscriptions}}
+import {
+{{name}},
+{{#if hasVariables}}{{name}}Variables{{/if}}
+} from "./{{name}}";
+{{/each}}
 
 {{#if mutations.length }}
     import * as mutations from "./mutations";
 {{/if}}
 {{#if queries.length}}
     import * as queries from "./queries";
+{{/if}}
+{{#if subscriptions.length}}
+    import * as subscriptions from "./subscriptions";
 {{/if}}
 export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>) => ({
     mutations: {
@@ -37,6 +46,15 @@ export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>)
                 query: queries.{{name}}{{#if hasVariables}},
                 variables{{/if}}
             }),
+    {{/each}}
+    },
+    subscriptions: {
+    {{#each subscriptions}}
+        {{name}}: {{#if hasVariables}}(variables: {{name}}Variables){{else}}(){{/if}} =>
+        passedClient.subscribe<{{name}}{{#if hasVariables}}, {{name}}Variables{{/if}}>({
+        query: subscriptions.{{name}}{{#if hasVariables}},
+        variables{{/if}}
+        }),
     {{/each}}
     }
 });
