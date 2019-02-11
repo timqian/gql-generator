@@ -98,11 +98,7 @@ const generateQuery = (
   return { queryStr, argumentList };
 };
 
-
-// const templateContextOld = { mutations: [{ name: 'StaticPageUpdateName', hasVariables: true }, { name: 'StaticPageRemove', hasVariables: true }, { name: 'StaticPageAdd', hasVariables: true }], queries: [{ name: 'StaticPages', hasVariables: false }], subscriptions: [] };
-
-const templateContext = { mutations: [], queries: [] };
-
+const templateContext = { mutations: [], queries: [], subscriptions: [] };
 
 /**
  * Generate the query for the specified field
