@@ -152,9 +152,9 @@ test('signup', async () => {
 );
 ```
 
-## Notice
+## Notes
 
-As this tool is used for test, it expends all the fields in a query. And as we know, there might be recursive field in the query. So `gqlg` ignores the types which has been added in the parent queries already.
-
+- As this tool is used for tests, it expands all of the fields in a query. There might be recursive fields in the query, so `gqlg` ignores the types which have been added in the parent queries already.
+- Variable names are derived from argument names, so variables generated from multiple occurrences of the same argument name must be deduped. An index is appended to any duplicates e.g. `region(language: $language1)`.
 
 > [Donate with bitcoin](https://getcryptoo.github.io/)
