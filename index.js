@@ -32,7 +32,11 @@ let indexJsExportAll = '';
  * @param duplicateArgCounts map for deduping argument name collisions
  * @param allArgsDict dictionary of all arguments
  */
-const getFieldArgsDict = (field, duplicateArgCounts, allArgsDict = {}) => field.args.reduce((o, arg) => {
+const getFieldArgsDict = (
+  field,
+  duplicateArgCounts,
+  allArgsDict = {},
+) => field.args.reduce((o, arg) => {
   if (arg.name in duplicateArgCounts) {
     const index = duplicateArgCounts[arg.name] + 1;
     duplicateArgCounts[arg.name] = index;
