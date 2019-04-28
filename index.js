@@ -9,7 +9,7 @@ program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
-  .option('--includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
+  .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
   .parse(process.argv);
 
 const { schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false } = program;
