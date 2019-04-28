@@ -9,9 +9,10 @@ program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
+  .option('--includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
   .parse(process.argv);
 
-const { schemaFilePath, destDirPath, depthLimit = 100 } = program;
+const { schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false } = program;
 const typeDef = fs.readFileSync(schemaFilePath);
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
@@ -74,7 +75,7 @@ const getVarsToTypesStr = dict => Object.entries(dict)
  * @param argumentsDict dictionary of arguments from all fields
  * @param duplicateArgCounts map for deduping argument name collisions
  * @param crossReferenceKeyList list of the cross reference
- * @param curDepth currentl depth of field
+ * @param curDepth current depth of field
  */
 const generateQuery = (
   curName,
@@ -97,6 +98,11 @@ const generateQuery = (
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
     childQuery = childKeys
+      .filter(fieldName => {
+        /* Exclude deprecated fields */
+        const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
+        return includeDeprecatedFields || !fieldSchema.isDeprecated;
+      })
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
         crossReferenceKeyList, curDepth + 1).queryStr)
       .filter(cur => cur)
@@ -163,12 +169,16 @@ const generateFile = (obj, description) => {
   const writeFolder = path.join(destDirPath, `./${outputFolderName}`);
   fs.mkdirSync(writeFolder);
   Object.keys(obj).forEach((type) => {
-    const queryResult = generateQuery(type, description);
-    const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
-    let query = queryResult.queryStr;
-    query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
-    fs.writeFileSync(path.join(writeFolder, `./${type}.gql`), query);
-    indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
+    const field = gqlSchema.getType(description).getFields()[type];
+    /* Only process non-deprecated queries/mutations: */
+    if (includeDeprecatedFields || !field.isDeprecated) {
+      const queryResult = generateQuery(type, description);
+      const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
+      let query = queryResult.queryStr;
+      query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
+      fs.writeFileSync(path.join(writeFolder, `./${type}.gql`), query);
+      indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
+    }
   });
   fs.writeFileSync(path.join(writeFolder, 'index.js'), indexJs);
   indexJsExportAll += `module.exports.${outputFolderName} = require('./${outputFolderName}');\n`;
