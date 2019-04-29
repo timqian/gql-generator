@@ -1,5 +1,6 @@
 type Query {
     user(id: Int!): User!
+    members: [Member!] @deprecated(reason: "Test a deprecated query")
 }
 
 type Mutation {
@@ -17,6 +18,10 @@ type Mutation {
     setConfig(
         prefs: PrefsInput
     ): Config!
+
+    sendMessage(
+        message: String!
+    ): String! @deprecated(reason: "Test a deprecated mutation")
 }
 
 input PrefsInput {
@@ -46,6 +51,7 @@ type User {
     createdAt: String!
     context: Context!
     details: UserDetails!
+    address: String! @deprecated(reason: "Test a deprecated field")
 }
 
 union UserDetails = Guest | Member

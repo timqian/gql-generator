@@ -72,6 +72,8 @@ mutation signup($username: String!, email: String!, password: String!){
 
 ```
 
+The tool will automatically exclude any `@deprecated` schema fields (see more on schema directives [here](https://www.apollographql.com/docs/graphql-tools/schema-directives)). To change this behavior to include deprecated fields you can use the `includeDeprecatedFields` flag when running the tool, e.g. `gqlg --includeDeprecatedFields`.
+
 ## Usage example
 
 Say you have a graphql schema like this: 
