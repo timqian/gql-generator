@@ -10,24 +10,17 @@ program
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
-  .option('-L, --leafsPath [value]', 'path of a file which specifies which types and fields to treat as leafs')
+  .option('-L, --filterPath [value]', 'path of a file containing a javascript function which filters fields')
   .parse(process.argv);
 
-const { schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, leafsPath } = program;
+const {
+  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, filterPath,
+} = program;
 const typeDef = fs.readFileSync(schemaFilePath);
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
 
-/*
- * The leaf file should contain an object with types and fields.
- * e.g.
- * {
- *   ALeafType: ['fieldToInclude', 'anotherFieldToInclude']
- *   AnotherLeafType: ['fieldToInclude', 'anotherFieldToInclude']
- * }
- */
-
-const leafs = leafsPath ? JSON.parse(fs.readFileSync(leafsPath)) : {};
+const filterFunc = filterPath ? require(path.resolve(filterPath)) : () => true;
 
 del.sync(destDirPath);
 path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
@@ -97,9 +90,10 @@ const generateQuery = (
   duplicateArgCounts = {},
   crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
   curDepth = 1,
+  curParentSchema,
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
-  const topLevel = ['Query', 'Mutation', 'Subscription'].includes(curParentType);
+  const curParentTypeName = curParentType.inspect().replace(/[[\]!]/g, '');
   const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
   const curType = gqlSchema.getType(curTypeName);
   let queryStr = '';
@@ -110,21 +104,31 @@ const generateQuery = (
     if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) return '';
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
-    const leaf = leafs[curType];
     childQuery = childKeys
-      .filter(fieldName => {
-        let include;
-        /* Exclude deprecated fields */
-        include = gqlSchema.getType(curType).getFields()[fieldName];
-
-        /* If this is a leaf type, exclude non-leaf fields */
-        /* Types can only be leaves if they are nested, i.e. they are not at the top level */
-        include = include && (topLevel || !leaf || leaf.includes(fieldName));
-
-        return include
+      .filter((fieldName) => {
+        const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
+        const fieldTypeName = fieldSchema.type.inspect().replace(/[[\]!]/g, '');
+        const fieldType = gqlSchema.getType(fieldTypeName);
+        const include = filterFunc({
+          parentSchema: curParentSchema,
+          parentType: curParentType,
+          parentTypeName: curParentTypeName,
+          parentName: curParentName,
+          curSchema: field,
+          curType,
+          curTypeName,
+          curName,
+          curDepth,
+          fieldSchema,
+          fieldType,
+          fieldTypeName,
+          fieldName,
+          argumentsDict,
+        });
+        return include && (includeDeprecatedFields || !fieldSchema.isDeprecated);
       })
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-        crossReferenceKeyList, curDepth + 1).queryStr)
+        crossReferenceKeyList, curDepth + 1, field).queryStr)
       .filter(cur => cur)
       .join('\n');
   }
@@ -143,7 +147,6 @@ const generateQuery = (
 
   /* Union types */
   if (curType.astNode && curType.astNode.kind === 'UnionTypeDefinition') {
-    const unionLeaf = leafs[curType]; // allows user to specify leaf fields on a union.
     const types = curType.getTypes();
     if (types && types.length) {
       const indent = `${'    '.repeat(curDepth)}`;
@@ -153,20 +156,31 @@ const generateQuery = (
       for (let i = 0, len = types.length; i < len; i++) {
         const valueTypeName = types[i];
         const valueType = gqlSchema.getType(valueTypeName);
-        const typeLeaf = leafs[valueType];
         const unionChildQuery = Object.keys(valueType.getFields())
-          .filter(fieldName => {
-            let include = true;
-            /* If this is a leaf type, exclude non-leaf fields */
-            /* Types can only be leaves if they are nested, i.e. they are not at the top level */
-            if (!topLevel) {
-              if (unionLeaf && !unionLeaf.includes(fieldName)) include = false;
-              if (typeLeaf && !typeLeaf.includes(fieldName)) include = false;
-            }
+          .filter((fieldName) => {
+            const fieldSchema = valueType.getFields()[fieldName];
+            const fieldTypeName = fieldSchema.type.inspect().replace(/[[\]!]/g, '');
+            const fieldType = gqlSchema.getType(fieldTypeName);
+            const include = filterFunc({
+              parentSchema: curParentSchema,
+              parentType: curParentType,
+              parentTypeName: curParentTypeName,
+              parentName: curParentName,
+              curSchema: field,
+              curType,
+              curTypeName,
+              curName,
+              curDepth,
+              fieldSchema,
+              fieldType,
+              fieldTypeName,
+              fieldName,
+              argumentsDict,
+            });
             return include;
           })
           .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-            crossReferenceKeyList, curDepth + 2).queryStr)
+            crossReferenceKeyList, curDepth + 2, field).queryStr)
           .filter(cur => cur)
           .join('\n');
         queryStr += `${fragIndent}... on ${valueTypeName} {\n${unionChildQuery}\n${fragIndent}}\n`;
@@ -201,10 +215,11 @@ const generateFile = (obj, description) => {
   const writeFolder = path.join(destDirPath, `./${outputFolderName}`);
   fs.mkdirSync(writeFolder);
   Object.keys(obj).forEach((type) => {
-    const field = gqlSchema.getType(description).getFields()[type];
+    const schema = gqlSchema.getType(description);
+    const field = schema.getFields()[type];
     /* Only process non-deprecated queries/mutations: */
     if (includeDeprecatedFields || !field.isDeprecated) {
-      const queryResult = generateQuery(type, description);
+      const queryResult = generateQuery(type, schema);
       const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
       let query = queryResult.queryStr;
       query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
