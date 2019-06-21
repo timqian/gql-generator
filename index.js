@@ -10,12 +10,17 @@ program
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
+  .option('-L, --filterPath [value]', 'path of a file containing a javascript function which filters fields')
   .parse(process.argv);
 
-const { schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false } = program;
+const {
+  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, filterPath,
+} = program;
 const typeDef = fs.readFileSync(schemaFilePath);
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
+
+const filterFunc = filterPath ? require(path.resolve(filterPath)) : () => true;
 
 del.sync(destDirPath);
 path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
@@ -85,8 +90,10 @@ const generateQuery = (
   duplicateArgCounts = {},
   crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
   curDepth = 1,
+  curParentSchema,
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
+  const curParentTypeName = curParentType.inspect().replace(/[[\]!]/g, '');
   const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
   const curType = gqlSchema.getType(curTypeName);
   let queryStr = '';
@@ -98,13 +105,30 @@ const generateQuery = (
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
     childQuery = childKeys
-      .filter(fieldName => {
-        /* Exclude deprecated fields */
+      .filter((fieldName) => {
         const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
-        return includeDeprecatedFields || !fieldSchema.isDeprecated;
+        const fieldTypeName = fieldSchema.type.inspect().replace(/[[\]!]/g, '');
+        const fieldType = gqlSchema.getType(fieldTypeName);
+        const include = filterFunc({
+          parentSchema: curParentSchema,
+          parentType: curParentType,
+          parentTypeName: curParentTypeName,
+          parentName: curParentName,
+          curSchema: field,
+          curType,
+          curTypeName,
+          curName,
+          curDepth,
+          fieldSchema,
+          fieldType,
+          fieldTypeName,
+          fieldName,
+          argumentsDict,
+        });
+        return include && (includeDeprecatedFields || !fieldSchema.isDeprecated);
       })
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-        crossReferenceKeyList, curDepth + 1).queryStr)
+        crossReferenceKeyList, curDepth + 1, field).queryStr)
       .filter(cur => cur)
       .join('\n');
   }
@@ -133,8 +157,30 @@ const generateQuery = (
         const valueTypeName = types[i];
         const valueType = gqlSchema.getType(valueTypeName);
         const unionChildQuery = Object.keys(valueType.getFields())
+          .filter((fieldName) => {
+            const fieldSchema = valueType.getFields()[fieldName];
+            const fieldTypeName = fieldSchema.type.inspect().replace(/[[\]!]/g, '');
+            const fieldType = gqlSchema.getType(fieldTypeName);
+            const include = filterFunc({
+              parentSchema: curParentSchema,
+              parentType: curParentType,
+              parentTypeName: curParentTypeName,
+              parentName: curParentName,
+              curSchema: field,
+              curType,
+              curTypeName,
+              curName,
+              curDepth,
+              fieldSchema,
+              fieldType,
+              fieldTypeName,
+              fieldName,
+              argumentsDict,
+            });
+            return include;
+          })
           .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-            crossReferenceKeyList, curDepth + 2).queryStr)
+            crossReferenceKeyList, curDepth + 2, field).queryStr)
           .filter(cur => cur)
           .join('\n');
         queryStr += `${fragIndent}... on ${valueTypeName} {\n${unionChildQuery}\n${fragIndent}}\n`;
@@ -169,10 +215,11 @@ const generateFile = (obj, description) => {
   const writeFolder = path.join(destDirPath, `./${outputFolderName}`);
   fs.mkdirSync(writeFolder);
   Object.keys(obj).forEach((type) => {
-    const field = gqlSchema.getType(description).getFields()[type];
+    const schema = gqlSchema.getType(description);
+    const field = schema.getFields()[type];
     /* Only process non-deprecated queries/mutations: */
     if (includeDeprecatedFields || !field.isDeprecated) {
-      const queryResult = generateQuery(type, description);
+      const queryResult = generateQuery(type, schema);
       const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
       let query = queryResult.queryStr;
       query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
