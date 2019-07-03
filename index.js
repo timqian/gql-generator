@@ -13,7 +13,7 @@ program
   .parse(process.argv);
 
 const { schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false } = program;
-const typeDef = fs.readFileSync(schemaFilePath);
+const typeDef = fs.readFileSync(schemaFilePath, "utf-8");
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
 
@@ -167,7 +167,11 @@ const generateFile = (obj, description) => {
       console.log('[gqlg warning]:', 'description is required');
   }
   const writeFolder = path.join(destDirPath, `./${outputFolderName}`);
-  fs.mkdirSync(writeFolder);
+  try {
+    fs.mkdirSync(writeFolder);
+  } catch (err) {
+    if (err.code !== 'EEXIST') throw err
+  }
   Object.keys(obj).forEach((type) => {
     const field = gqlSchema.getType(description).getFields()[type];
     /* Only process non-deprecated queries/mutations: */
