@@ -110,7 +110,7 @@ const generateQuery = (
   }
 
   if (!(curType.getFields && !childQuery)) {
-    queryStr = `${'    '.repeat(curDepth)}${field.name}`;
+    queryStr = `${'  '.repeat(curDepth)}${field.name}`;
     // Do not include args in nested fields
     if (field.args.length > 0 && curDepth === 1) {
       const dict = getFieldArgsDict(field, duplicateArgCounts, argumentsDict);
@@ -118,7 +118,7 @@ const generateQuery = (
       queryStr += `(${getArgsToVarsStr(dict)})`;
     }
     if (childQuery) {
-      queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
+      queryStr += `{\n${childQuery}\n${'  '.repeat(curDepth)}}`;
     }
   }
 
@@ -126,8 +126,8 @@ const generateQuery = (
   if (curType.astNode && curType.astNode.kind === 'UnionTypeDefinition') {
     const types = curType.getTypes();
     if (types && types.length) {
-      const indent = `${'    '.repeat(curDepth)}`;
-      const fragIndent = `${'    '.repeat(curDepth + 1)}`;
+      const indent = `${'  '.repeat(curDepth)}`;
+      const fragIndent = `${'  '.repeat(curDepth + 1)}`;
       queryStr += '{\n';
 
       for (let i = 0, len = types.length; i < len; i++) {
