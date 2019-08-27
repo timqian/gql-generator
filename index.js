@@ -99,6 +99,7 @@ const generateQuery = (
     if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) return '';
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
+    const hasRelevantKeys = Object.keys(gqlSchema.getType(curParentType).getFields()).some(it => ['id', 'title', 'name', 'url'].includes(it));
     childQuery = childKeys
       .filter(fieldName => {
         /* Exclude deprecated fields */
@@ -106,7 +107,7 @@ const generateQuery = (
         return includeDeprecatedFields || !fieldSchema.isDeprecated;
       })
       // Only include field if root or for n+1 if field is relevant.
-      .filter(fieldName => operationName === 'Mutation' || curDepth == 1 || ['id', 'title', 'name', 'url'].includes(fieldName))
+      .filter(fieldName => operationName === 'Mutation' || curDepth == 1 || !hasRelevantKeys || ['id', 'title', 'name', 'url'].includes(fieldName))
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
         crossReferenceKeyList, curDepth + 1).queryStr)
       .filter(cur => cur)
