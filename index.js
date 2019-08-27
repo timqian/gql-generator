@@ -17,6 +17,8 @@ const typeDef = fs.readFileSync(schemaFilePath, "utf-8");
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
 
+let operationName;
+
 del.sync(destDirPath);
 path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
   const pathTmp = path.join(before, cur + path.sep);
@@ -104,7 +106,7 @@ const generateQuery = (
         return includeDeprecatedFields || !fieldSchema.isDeprecated;
       })
       // Only include field if root or for n+1 if field is relevant.
-      .filter(fieldName => curDepth == 1 || ['id', 'title', 'name', 'url'].includes(fieldName))
+      .filter(fieldName => operationName === 'Mutation' || curDepth == 1 || ['id', 'title', 'name', 'url'].includes(fieldName))
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
         crossReferenceKeyList, curDepth + 1).queryStr)
       .filter(cur => cur)
@@ -156,6 +158,7 @@ const generateQuery = (
 const generateFile = (obj, description) => {
   let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
   let outputFolderName;
+  operationName = description;
   switch (description) {
     case 'Mutation':
       outputFolderName = 'mutations';
