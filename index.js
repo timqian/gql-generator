@@ -118,7 +118,7 @@ const generateQuery = (
       queryStr += `(${getArgsToVarsStr(dict)})`;
     }
     if (childQuery) {
-      queryStr += `{\n${childQuery}\n${'  '.repeat(curDepth)}}`;
+      queryStr += ` {\n${childQuery}\n${'  '.repeat(curDepth)}}`;
     }
   }
 
