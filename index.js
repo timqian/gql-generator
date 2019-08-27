@@ -128,7 +128,7 @@ const generateQuery = (
     if (types && types.length) {
       const indent = `${'  '.repeat(curDepth)}`;
       const fragIndent = `${'  '.repeat(curDepth + 1)}`;
-      queryStr += '{\n';
+      queryStr += ' {\n';
 
       for (let i = 0, len = types.length; i < len; i++) {
         const valueTypeName = types[i];
@@ -180,7 +180,7 @@ const generateFile = (obj, description) => {
       const queryResult = generateQuery(type, description);
       const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
       let query = queryResult.queryStr;
-      query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
+      query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''} {\n${query}\n}`;
       fs.writeFileSync(path.join(writeFolder, `./${type}.gql`), query);
       indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
     }
