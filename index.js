@@ -111,7 +111,8 @@ const generateQuery = (
 
   if (!(curType.getFields && !childQuery)) {
     queryStr = `${'    '.repeat(curDepth)}${field.name}`;
-    if (field.args.length > 0) {
+    // Do not include args in nested fields
+    if (field.args.length > 0 && curDepth === 1) {
       const dict = getFieldArgsDict(field, duplicateArgCounts, argumentsDict);
       Object.assign(argumentsDict, dict);
       queryStr += `(${getArgsToVarsStr(dict)})`;
