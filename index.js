@@ -103,6 +103,8 @@ const generateQuery = (
         const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
         return includeDeprecatedFields || !fieldSchema.isDeprecated;
       })
+      // Only include field if root or for n+1 if field is relevant.
+      .filter(fieldName => curDepth == 1 || ['id', 'title', 'name', 'url'].includes(fieldName))
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
         crossReferenceKeyList, curDepth + 1).queryStr)
       .filter(cur => cur)
