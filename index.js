@@ -1,9 +1,7 @@
-const fs = require('fs');
 const { Source, buildSchema } = require('graphql');
 
-function getObject({ schemaFilePath, depthLimit = 100, includeDeprecatedFields = false }) {
-  const typeDef = fs.readFileSync(schemaFilePath, 'utf-8');
-  const source = new Source(typeDef);
+function getObject({ typeDefs, depthLimit = 100, includeDeprecatedFields = false }) {
+  const source = new Source(typeDefs);
   const gqlSchema = buildSchema(source);
 
   let operationName;
@@ -14,38 +12,35 @@ function getObject({ schemaFilePath, depthLimit = 100, includeDeprecatedFields =
    * @param duplicateArgCounts map for deduping argument name collisions
    * @param allArgsDict dictionary of all arguments
    */
-  const getFieldArgsDict = (field, duplicateArgCounts, allArgsDict = {}) =>
-    field.args.reduce((o, arg) => {
-      if (arg.name in duplicateArgCounts) {
-        const index = duplicateArgCounts[arg.name] + 1;
-        duplicateArgCounts[arg.name] = index;
-        o[`${arg.name}${index}`] = arg;
-      } else if (allArgsDict[arg.name]) {
-        duplicateArgCounts[arg.name] = 1;
-        o[`${arg.name}1`] = arg;
-      } else {
-        o[arg.name] = arg;
-      }
-      return o;
-    }, {});
+  const getFieldArgsDict = (field, duplicateArgCounts, allArgsDict = {}) => field.args.reduce((o, arg) => {
+    if (arg.name in duplicateArgCounts) {
+      const index = duplicateArgCounts[arg.name] + 1;
+      duplicateArgCounts[arg.name] = index;
+      o[`${arg.name}${index}`] = arg;
+    } else if (allArgsDict[arg.name]) {
+      duplicateArgCounts[arg.name] = 1;
+      o[`${arg.name}1`] = arg;
+    } else {
+      o[arg.name] = arg;
+    }
+    return o;
+  }, {});
 
   /**
    * Generate variables string
    * @param dict dictionary of arguments
    */
-  const getArgsToVarsStr = dict =>
-    Object.entries(dict)
-      .map(([varName, arg]) => `${arg.name}: $${varName}`)
-      .join(', ');
+  const getArgsToVarsStr = dict => Object.entries(dict)
+    .map(([varName, arg]) => `${arg.name}: $${varName}`)
+    .join(', ');
 
   /**
    * Generate types string
    * @param dict dictionary of arguments
    */
-  const getVarsToTypesStr = dict =>
-    Object.entries(dict)
-      .map(([varName, arg]) => `$${varName}: ${arg.type}`)
-      .join(', ');
+  const getVarsToTypesStr = dict => Object.entries(dict)
+    .map(([varName, arg]) => `$${varName}: ${arg.type}`)
+    .join(', ');
 
   /**
    * Generate the query for the specified field
@@ -64,7 +59,7 @@ function getObject({ schemaFilePath, depthLimit = 100, includeDeprecatedFields =
     argumentsDict = {},
     duplicateArgCounts = {},
     crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
-    curDepth = 1
+    curDepth = 1,
   ) => {
     const field = gqlSchema.getType(curParentType).getFields()[curName];
     const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
@@ -77,27 +72,30 @@ function getObject({ schemaFilePath, depthLimit = 100, includeDeprecatedFields =
       if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) return '';
       crossReferenceKeyList.push(crossReferenceKey);
       const childKeys = Object.keys(curType.getFields());
-      const hasRelevantKeys = Object.keys(gqlSchema.getType(curParentType).getFields()).some(it =>
-        ['id', 'title', 'name', 'url'].includes(it)
-      );
+      const hasRelevantKeys = Object.keys(gqlSchema.getType(curParentType).getFields()).some(it => ['id', 'title', 'name', 'url'].includes(it));
       childQuery = childKeys
-        .filter(fieldName => {
+        .filter((fieldName) => {
           /* Exclude deprecated fields */
           const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
           return includeDeprecatedFields || !fieldSchema.isDeprecated;
         })
         // Only include field if root or for n+1 if field is relevant.
         .filter(
-          fieldName =>
-            operationName === 'Mutation' ||
-            curDepth == 1 ||
-            !hasRelevantKeys ||
-            ['id', 'title', 'name', 'url'].includes(fieldName)
+          fieldName => operationName === 'Mutation'
+            || curDepth == 1
+            || !hasRelevantKeys
+            || ['id', 'title', 'name', 'url'].includes(fieldName),
         )
         .map(
-          cur =>
-            generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts, crossReferenceKeyList, curDepth + 1)
-              .queryStr
+          cur => generateQuery(
+            cur,
+            curType,
+            curName,
+            argumentsDict,
+            duplicateArgCounts,
+            crossReferenceKeyList,
+            curDepth + 1,
+          ).queryStr,
         )
         .filter(cur => cur)
         .join('\n');
@@ -129,16 +127,15 @@ function getObject({ schemaFilePath, depthLimit = 100, includeDeprecatedFields =
           const valueType = gqlSchema.getType(valueTypeName);
           const unionChildQuery = Object.keys(valueType.getFields())
             .map(
-              cur =>
-                generateQuery(
-                  cur,
-                  valueType,
-                  curName,
-                  argumentsDict,
-                  duplicateArgCounts,
-                  crossReferenceKeyList,
-                  curDepth + 2
-                ).queryStr
+              cur => generateQuery(
+                cur,
+                valueType,
+                curName,
+                argumentsDict,
+                duplicateArgCounts,
+                crossReferenceKeyList,
+                curDepth + 2,
+              ).queryStr,
             )
             .filter(cur => cur)
             .join('\n');
@@ -159,14 +156,16 @@ function getObject({ schemaFilePath, depthLimit = 100, includeDeprecatedFields =
     operationName = description;
     const result = {};
 
-    Object.keys(obj).forEach(type => {
+    Object.keys(obj).forEach((type) => {
       const field = gqlSchema.getType(description).getFields()[type];
       /* Only process non-deprecated queries/mutations: */
       if (includeDeprecatedFields || !field.isDeprecated) {
         const queryResult = generateQuery(type, description);
         const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
         let query = queryResult.queryStr;
-        query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''} {\n${query}\n}`;
+        query = `${description.toLowerCase()} ${type}${
+          varsToTypesStr ? `(${varsToTypesStr})` : ''
+        } {\n${query}\n}`;
 
         result[type] = query;
       }
@@ -178,19 +177,22 @@ function getObject({ schemaFilePath, depthLimit = 100, includeDeprecatedFields =
   const finalResult = {};
 
   if (gqlSchema.getMutationType()) {
-    finalResult['Mutation'] = generateFile(gqlSchema.getMutationType().getFields(), 'Mutation');
+    finalResult.Mutation = generateFile(gqlSchema.getMutationType().getFields(), 'Mutation');
   } else {
     console.log('[gqlg warning]:', 'No mutation type found in your schema');
   }
 
   if (gqlSchema.getQueryType()) {
-    finalResult['Query'] = generateFile(gqlSchema.getQueryType().getFields(), 'Query');
+    finalResult.Query = generateFile(gqlSchema.getQueryType().getFields(), 'Query');
   } else {
     console.log('[gqlg warning]:', 'No query type found in your schema');
   }
 
   if (gqlSchema.getSubscriptionType()) {
-    finalResult['Subscription'] = generateFile(gqlSchema.getSubscriptionType().getFields(), 'Subscription');
+    finalResult.Subscription = generateFile(
+      gqlSchema.getSubscriptionType().getFields(),
+      'Subscription',
+    );
   } else {
     console.log('[gqlg warning]:', 'No subscription type found in your schema');
   }
