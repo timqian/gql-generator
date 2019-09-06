@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/timqian/gql-generator.git"
+    "url": "git+https://github.com/Synchronized-TV/gql-generator"
   },
   "keywords": [
     "graphql",
@@ -21,18 +21,12 @@
   ],
   "author": "timqian",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/timqian/gql-generator/issues"
-  },
-  "homepage": "https://github.com/timqian/gql-generator#readme",
   "dependencies": {
     "commander": "^2.15.1",
     "del": "^3.0.0",
-    "graphql": "^0.13.2"
+    "graphql": "^14.5.3"
   },
   "devDependencies": {
-    "mocha": "^5.0.5",
-    "should": "^13.2.1",
     "eslint": "^5.5.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-import": "^2.14.0"
