@@ -12,8 +12,10 @@ program
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
   .parse(process.argv);
 
-const { schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false } = program;
-const typeDef = fs.readFileSync(schemaFilePath, "utf-8");
+const {
+  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false,
+} = program;
+const typeDef = fs.readFileSync(schemaFilePath, 'utf-8');
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
 
@@ -92,19 +94,36 @@ const generateQuery = (
   let queryStr = '';
   let childQuery = '';
 
+
   if (curType.getFields) {
+    // if(curName === 'match') console.log(curParentName);
     const crossReferenceKey = `${curParentName}To${curName}Key`;
-    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) return '';
+    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) {
+      if (curName === 'match') {
+        console.log(curParentType);
+        // console.log(crossReferenceKey);
+      }
+
+      return '';
+    }
+
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
+    if (curName === 'match') console.log(childKeys);
+    if (curParentName === 'lineup') {
+      // console.log('crossReferenceKey', crossReferenceKey);
+    }
     childQuery = childKeys
-      .filter(fieldName => {
+      .filter((fieldName) => {
         /* Exclude deprecated fields */
         const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
         return includeDeprecatedFields || !fieldSchema.isDeprecated;
       })
-      .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-        crossReferenceKeyList, curDepth + 1).queryStr)
+      .map((cur) => {
+        const query = generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
+          crossReferenceKeyList, curDepth + 1).queryStr;
+        return query;
+      })
       .filter(cur => cur)
       .join('\n');
   }
@@ -170,7 +189,7 @@ const generateFile = (obj, description) => {
   try {
     fs.mkdirSync(writeFolder);
   } catch (err) {
-    if (err.code !== 'EEXIST') throw err
+    if (err.code !== 'EEXIST') throw err;
   }
   Object.keys(obj).forEach((type) => {
     const field = gqlSchema.getType(description).getFields()[type];
