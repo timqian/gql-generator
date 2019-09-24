@@ -98,7 +98,7 @@ const generateQuery = (
   if (curType.getFields) {
     // if(curName === 'match') console.log(curParentName);
     const crossReferenceKey = `${curParentName}To${curName}Key`;
-    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) {
+    if (curDepth > depthLimit) {
       if (curName === 'match') {
         console.log(curParentType);
         // console.log(crossReferenceKey);
