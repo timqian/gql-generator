@@ -96,23 +96,13 @@ const generateQuery = (
 
 
   if (curType.getFields) {
-    // if(curName === 'match') console.log(curParentName);
     const crossReferenceKey = `${curParentName}To${curName}Key`;
     if (curDepth > depthLimit) {
-      if (curName === 'match') {
-        console.log(curParentType);
-        // console.log(crossReferenceKey);
-      }
-
       return '';
     }
 
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
-    if (curName === 'match') console.log(childKeys);
-    if (curParentName === 'lineup') {
-      // console.log('crossReferenceKey', crossReferenceKey);
-    }
     childQuery = childKeys
       .filter((fieldName) => {
         /* Exclude deprecated fields */
