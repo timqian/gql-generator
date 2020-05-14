@@ -32,20 +32,24 @@ import {
 export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>) => ({
     mutations: {
     {{#each mutations}}
-        {{name}}: {{#if hasVariables}}(variables: {{toUpperCase name}}MutationVariables){{else}}(){{/if}} =>
-            passedClient.mutate<{{toUpperCase name}}Mutation{{#if hasVariables}}, {{toUpperCase name}}MutationVariables{{/if}}>({
+        {{name}}: async {{#if hasVariables}}(variables: {{toUpperCase name}}MutationVariables){{else}}(){{/if}} => {
+        const result = await passedClient.mutate<{{toUpperCase name}}Mutation{{#if hasVariables}}, {{toUpperCase name}}MutationVariables{{/if}}>({
                 mutation: mutations.{{name}}{{#if hasVariables}},
                 variables{{/if}}
-            }),
+            })
+        return result.data.{{name}}
+        },
     {{/each}}
     },
     queries: {
     {{#each queries}}
-        {{name}}: {{#if hasVariables}}(variables: {{toUpperCase name}}QueryVariables){{else}}(){{/if}} =>
-            passedClient.query<{{toUpperCase name}}Query{{#if hasVariables}}, {{toUpperCase name}}QueryVariables{{/if}}>({
+        {{name}}: async {{#if hasVariables}}(variables: {{toUpperCase name}}QueryVariables){{else}}(){{/if}} => {
+        const result = await passedClient.query<{{toUpperCase name}}Query{{#if hasVariables}}, {{toUpperCase name}}QueryVariables{{/if}}>({
                 query: queries.{{name}}{{#if hasVariables}},
                 variables{{/if}}
-            }),
+            })
+        return result.data.{{name}}
+        },
     {{/each}}
     },
     subscriptions: {
