@@ -3,12 +3,12 @@ import {NormalizedCacheObject} from "apollo-cache-inmemory";
 
 import {
 {{#each queries}}
-{{name}}Query,
-{{#if hasVariables}}{{name}}QueryVariables,{{/if}}
+{{toUpperCase name}}Query,
+{{#if hasVariables}}{{toUpperCase name}}QueryVariables,{{/if}}
 {{/each}}
 {{#each mutations}}
-{{name}}Mutation,
-{{#if hasVariables}}{{name}}MutationVariables,{{/if}}
+{{toUpperCase name}}Mutation,
+{{#if hasVariables}}{{toUpperCase name}}MutationVariables,{{/if}}
 {{/each}}
 } from "{{pathToTypes}}";
 
@@ -32,8 +32,8 @@ import {
 export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>) => ({
     mutations: {
     {{#each mutations}}
-        {{name}}: {{#if hasVariables}}(variables: {{name}}MutationVariables){{else}}(){{/if}} =>
-            passedClient.mutate<{{name}}Mutation{{#if hasVariables}}, {{name}}MutationVariables{{/if}}>({
+        {{name}}: {{#if hasVariables}}(variables: {{toUpperCase name}}MutationVariables){{else}}(){{/if}} =>
+            passedClient.mutate<{{toUpperCase name}}Mutation{{#if hasVariables}}, {{toUpperCase name}}MutationVariables{{/if}}>({
                 mutation: mutations.{{name}}{{#if hasVariables}},
                 variables{{/if}}
             }),
@@ -41,8 +41,8 @@ export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>)
     },
     queries: {
     {{#each queries}}
-        {{name}}: {{#if hasVariables}}(variables: {{name}}QueryVariables){{else}}(){{/if}} =>
-            passedClient.query<{{name}}Query{{#if hasVariables}}, {{name}}QueryVariables{{/if}}>({
+        {{name}}: {{#if hasVariables}}(variables: {{toUpperCase name}}QueryVariables){{else}}(){{/if}} =>
+            passedClient.query<{{toUpperCase name}}Query{{#if hasVariables}}, {{toUpperCase name}}QueryVariables{{/if}}>({
                 query: queries.{{name}}{{#if hasVariables}},
                 variables{{/if}}
             }),
@@ -50,7 +50,7 @@ export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>)
     },
     subscriptions: {
     {{#each subscriptions}}
-        {{name}}: {{#if hasVariables}}(variables: {{name}}SubscriptionVariables){{else}}(){{/if}} =>
+        {{name}}: {{#if hasVariables}}(variables: {{toUpperCase name}}SubscriptionVariables){{else}}(){{/if}} =>
         passedClient.subscribe<{{name}}Subscription{{#if hasVariables}}, {{name}}SubscriptionVariables{{/if}}>({
         query: subscriptions.{{name}}{{#if hasVariables}},
         variables{{/if}}

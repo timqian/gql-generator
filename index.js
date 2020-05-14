@@ -170,6 +170,11 @@ if (gqlSchema.getSubscriptionType()) {
 }
 const Handlebars = require('handlebars');
 
+Handlebars.registerHelper('toUpperCase', function(s) {
+  if (typeof s !== 'string') return ''
+  return s.charAt(0).toUpperCase() + s.slice(1)
+});
+
 const rootTemplate = fs.readFileSync(path.join(__dirname, './root.handlebars'), 'utf8');
 
 const generateIndex = () => Handlebars.compile(rootTemplate)(templateContext);
