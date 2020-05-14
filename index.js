@@ -9,9 +9,20 @@ program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
+  .option('--typesPath [value]', 'path to your generated typescript file with GraphQL Types')
   .parse(process.argv);
 
-const { schemaFilePath, destDirPath, depthLimit = 100 } = program;
+
+
+
+console.log()
+const { schemaFilePath, destDirPath, typesPath, depthLimit = 100 } = program;
+
+let pathToDestDir = `${process.cwd()}${destDirPath}`;
+let pathToTypes = `${process.cwd()}${typesPath}`;
+const typesRelativePathWithExtension = path.relative(pathToDestDir, pathToTypes);
+const typesRelativePath = typesRelativePathWithExtension.replace(path.extname(typesRelativePathWithExtension), "");
+
 const typeDef = fs.readFileSync(schemaFilePath);
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
@@ -98,7 +109,7 @@ const generateQuery = (
   return { queryStr, argumentList };
 };
 
-const templateContext = { mutations: [], queries: [], subscriptions: [] };
+const templateContext = { mutations: [], queries: [], subscriptions: [], pathToTypes: typesRelativePath };
 
 /**
  * Generate the query for the specified field

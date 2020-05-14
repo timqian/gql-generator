@@ -1,18 +1,17 @@
 import {ApolloClient} from "apollo-client";
 import {NormalizedCacheObject} from "apollo-cache-inmemory";
 
-{{#each queries}}
 import {
-{{name}},{{#if hasVariables}}
-{{name}}Variables{{/if}}
-} from "./{{name}}";
+{{#each queries}}
+{{name}}Query,
+{{#if hasVariables}}{{name}}QueryVariables,{{/if}}
 {{/each}}
 {{#each mutations}}
-import {
-{{name}},
-{{#if hasVariables}}{{name}}Variables{{/if}}
-} from "./{{name}}";
+{{name}}Mutation,
+{{#if hasVariables}}{{name}}MutationVariables,{{/if}}
 {{/each}}
+} from "{{pathToTypes}}";
+
 {{#each subscriptions}}
 import {
 {{name}},
@@ -29,11 +28,12 @@ import {
 {{#if subscriptions.length}}
     import * as subscriptions from "./subscriptions";
 {{/if}}
+
 export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>) => ({
     mutations: {
     {{#each mutations}}
-        {{name}}: {{#if hasVariables}}(variables: {{name}}Variables){{else}}(){{/if}} =>
-            passedClient.mutate<{{name}}{{#if hasVariables}}, {{name}}Variables{{/if}}>({
+        {{name}}: {{#if hasVariables}}(variables: {{name}}MutationVariables){{else}}(){{/if}} =>
+            passedClient.mutate<{{name}}Mutation{{#if hasVariables}}, {{name}}MutationVariables{{/if}}>({
                 mutation: mutations.{{name}}{{#if hasVariables}},
                 variables{{/if}}
             }),
@@ -41,8 +41,8 @@ export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>)
     },
     queries: {
     {{#each queries}}
-        {{name}}: {{#if hasVariables}}(variables: {{name}}Variables){{else}}(){{/if}} =>
-            passedClient.query<{{name}}{{#if hasVariables}}, {{name}}Variables{{/if}}>({
+        {{name}}: {{#if hasVariables}}(variables: {{name}}QueryVariables){{else}}(){{/if}} =>
+            passedClient.query<{{name}}Query{{#if hasVariables}}, {{name}}QueryVariables{{/if}}>({
                 query: queries.{{name}}{{#if hasVariables}},
                 variables{{/if}}
             }),
@@ -50,8 +50,8 @@ export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>)
     },
     subscriptions: {
     {{#each subscriptions}}
-        {{name}}: {{#if hasVariables}}(variables: {{name}}Variables){{else}}(){{/if}} =>
-        passedClient.subscribe<{{name}}{{#if hasVariables}}, {{name}}Variables{{/if}}>({
+        {{name}}: {{#if hasVariables}}(variables: {{name}}SubscriptionVariables){{else}}(){{/if}} =>
+        passedClient.subscribe<{{name}}Subscription{{#if hasVariables}}, {{name}}SubscriptionVariables{{/if}}>({
         query: subscriptions.{{name}}{{#if hasVariables}},
         variables{{/if}}
         }),
