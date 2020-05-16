@@ -1,0 +1,33 @@
+import merge from "lodash/merge";
+{{#each modules}}import { {{name}}Resolvers } from "../modules/{{name}}/graphql/{{name}}Resolvers";{{/each}}
+
+// This file is generated. If you want to add custom resolvers do following steps:
+// 1. create customResolvers.ts file
+// 2. import this resolvers.ts file in it and extend the resolvers, like so:
+//
+// import { resolvers } from "./resolvers";
+// export const extendedResolvers = merge({}, resolvers, {
+//     Query: {
+//         customQuery: () => "",
+//     },
+//     Mutation: {
+//         customMutation: () => "",
+//     },
+//     CustomType: {
+//         CustomTypeField: (parent) => parent,
+//     },
+// });
+// 3. change your src/graphql/schema.ts file to import the extendedResolvers instead.
+// 4. change your src/graphql/testHelpers/getGqlClientWithMockedContext file to import the extendedResolvers instead
+// 5. Please let us know why did you have to do those changes - we would love to make your experience better,
+// including not having to change the defaults
+
+export const resolvers = merge(
+{},
+{
+Query: {
+healthcheck: () => "All good!",
+},
+},
+{{#each modules}}{{name}}Resolvers,{{/each}}
+);

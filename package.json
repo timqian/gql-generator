@@ -28,14 +28,17 @@
   "dependencies": {
     "commander": "^2.15.1",
     "del": "^3.0.0",
+    "find-package-json": "^1.2.0",
     "graphql": "^0.13.2",
-    "handlebars": "^4.0.12"
+    "handlebars": "^4.0.12",
+    "shelljs": "^0.8.4"
   },
   "devDependencies": {
-    "mocha": "^5.0.5",
-    "should": "^13.2.1",
     "eslint": "^5.5.0",
     "eslint-config-airbnb-base": "^13.1.0",
-    "eslint-plugin-import": "^2.14.0"
+    "eslint-plugin-import": "^2.14.0",
+    "mocha": "^5.0.5",
+    "prettier": "^2.0.5",
+    "should": "^13.2.1"
   }
 }
