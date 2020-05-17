@@ -1,0 +1,9 @@
+import { MyContext } from "./types";
+import { schema } from "./graphql/schema";
+
+{{#each modules}}import { get{{name}}Context } from "./modules/{{name}}/get{{name}}Context";{{/each}}
+
+const context = ({ req }: { req: object }): MyContext => ({
+{{#each modules}}...get{{name}}Context(),{{/each}}
+});
+export const startupConfig = { schema, context };

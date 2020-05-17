@@ -1,0 +1,6 @@
+/* eslint-disable import/no-cycle */
+// cycles are ok here since we only deal with types.
+{{#each modules}}import { I{{name}}Context } from "./modules/{{name}}/I{{name}}Context";
+{{/each}}
+
+export interface MyContext extends {{#each modules}}I{{name}}Context,{{/each}} {}
