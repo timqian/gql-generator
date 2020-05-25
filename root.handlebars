@@ -5,6 +5,8 @@
 
 import {ApolloClient} from "apollo-client";
 import {NormalizedCacheObject} from "apollo-cache-inmemory";
+import { ApolloQueryResult } from "apollo-client/lib/core/types";
+import { FetchResult } from 'apollo-link';
 
 import {
 {{#each queries}}
@@ -38,7 +40,7 @@ export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>)
     mutations: {
     {{#each mutations}}
         {{name}}: async {{#if hasVariables}}(variables: {{toUpperCase name}}MutationVariables){{else}}(){{/if}} => {
-        let result;
+        let result: FetchResult<{{toUpperCase name}}Mutation>
         const prepareError = new Error("");
         const splitLines = prepareError.stack.split("\n").slice(2);
         try {
@@ -61,7 +63,7 @@ export const getOperations = (passedClient: ApolloClient<NormalizedCacheObject>)
     queries: {
     {{#each queries}}
         {{name}}: async {{#if hasVariables}}(variables: {{toUpperCase name}}QueryVariables){{else}}(){{/if}} => {
-        let result;
+        let result: ApolloQueryResult<{{toUpperCase name}}Query>;
         const prepareError = new Error("");
         const splitLines = prepareError.stack.split("\n").slice(2);
         try {

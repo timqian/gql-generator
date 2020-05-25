@@ -1,151 +1,184 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const program = require('commander');
 const finder = require('find-package-json');
 const shelljs = require('shelljs');
+
+const getModuleInfos = require('./parsegraphql/getModuleInfos');
+const getModuleNames = require('./parsegraphql/getModuleNames');
+const checkIfGitStateClean = require('./helpers/checkIfGitStateClean');
+const saveRenderedTemplate = require('./helpers/saveRenderedTemplate');
+checkIfGitStateClean();
+
 const f = finder(process.cwd());
 const projectMainPath = f
   .next()
   .filename.split('/')
   .filter((c) => c.indexOf('package.json') == -1)
   .join('/');
-let moduleName;
 
-program
-  .version('0.1.0')
-  .arguments('<moduleName>')
-  .action(function (_moduleName) {
-    moduleName = _moduleName;
-  });
+const graphqlPaths = shelljs.ls(`${projectMainPath}/src/modules/*/graphql/*.graphql`).map((p) => ({ name: p }));
 
-program.parse(process.argv);
-
-if (typeof moduleName === 'undefined') {
-  console.error('  Error: No module name given!');
-  program.help();
-}
-//TODO find package.josn and go to ./src/graphql from there
-//TODO take path to the graphql folder
-//TODO don't allow if uncommited changes.
-
-console.log('command:', moduleName, projectMainPath);
-
-console.log('create path', `${projectMainPath}/src/modules/${moduleName}/graphql`);
-shelljs.mkdir('-p', `${projectMainPath}/src/modules/${moduleName}/graphql`);
-
-const Handlebars = require('handlebars');
-
-const modules = shelljs.ls(`${projectMainPath}/src/modules/`).map((p) => ({ name: p }));
-
-const accounts = modules.find((m) => m.name === 'Accounts');
-accounts.types = true;
-accounts.queries = [{ name: 'me' }, { name: 'notMe' }];
-accounts.mutations = [{ name: 'UserChangeName' }];
-if (modules.inventory) {
-  modules.inventory.queries = [{ name: 'inventoryGetName' }];
-}
+const moduleNames = getModuleNames(graphqlPaths);
+const modules = getModuleInfos(moduleNames);
 
 modules.forEach((module) => {
-
-  const moduleName = module.name
+  const moduleName = module.name;
   const createModuleResolvers = () => {
-    const template = fs.readFileSync(path.join(__dirname, './templates/moduleResolvers.handlebars'), 'utf8');
-    const context = { types: true, queries: [], mutations: [], moduleName };
-    // const context = { types: true, queries: [{name: "myQuery"}], mutations: [{name: "myMutation"}], moduleName };
-    const generateIndex = () => Handlebars.compile(template)(context);
-
-    fs.writeFileSync(
-      path.join(`${projectMainPath}/src/modules/${moduleName}/graphql/`, `${moduleName}Resolvers.ts`),
-      generateIndex()
-    );
+    const templateName = './templates/moduleResolvers.handlebars';
+    const context = { ...module, moduleName: module.name };
+    const filePath = `${projectMainPath}/src/modules/${moduleName}/graphql/`;
+    const fileName = `${moduleName}Resolvers.ts`;
+    saveRenderedTemplate(templateName, context, filePath, fileName);
   };
 
   createModuleResolvers();
-})
 
-// const createModuleGraphql = () => {
-//   const moduleGraphqlTemplate = fs.readFileSync(path.join(__dirname, './templates/module.graphql'), 'utf8');
-//
-//   const generateIndex = () => Handlebars.compile(moduleGraphqlTemplate)({});
-//
-//   fs.writeFileSync(
-//     path.join(`${projectMainPath}/src/modules/${moduleName}/graphql/`, `${moduleName}.graphql`),
-//     generateIndex()
-//   );
-// };
-//
-// createModuleGraphql();
+  const createQuery = (queryName) => {
+    const templateName = './templates/query.handlebars';
+    const context = { queryName, moduleName };
+    const filePath = `${projectMainPath}/src/modules/${moduleName}/graphql/queries/`;
+    const fileName = `${queryName}Query.ts`;
+    const keepIfExists = true;
+    saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
+  };
 
+  const createQuerySpec = (queryName) => {
+    const templateName = './templates/query.spec.handlebars';
+    const context = { queryName, moduleName };
+    const filePath = `${projectMainPath}/src/modules/${moduleName}/graphql/queries/`;
+    const fileName = `${queryName}Query.spec.ts`;
+    const keepIfExists = true;
+    saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
+  };
+
+  if (module.queries && module.queries.length) {
+    shelljs.mkdir('-p', `${projectMainPath}/src/modules/${moduleName}/graphql/queries`);
+    module.queries.forEach(({ name }) => {
+      createQuery(name);
+      createQuerySpec(name);
+    });
+  }
+
+  const createMutation = (mutationName) => {
+    const templateName = './templates/mutation.handlebars';
+    const context = { mutationName, moduleName };
+    const filePath = `${projectMainPath}/src/modules/${moduleName}/graphql/mutations/`;
+    const fileName = `${mutationName}Mutation.ts`;
+    const keepIfExists = true;
+    saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
+  };
+
+  const createMutationSpec = (mutationName) => {
+    const templateName = './templates/mutation.spec.handlebars';
+    const context = { mutationName, moduleName };
+    const filePath = `${projectMainPath}/src/modules/${moduleName}/graphql/mutations/`;
+    const fileName = `${mutationName}Mutation.spec.ts`;
+    const keepIfExists = true;
+    saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
+  };
+
+  if (module.mutations && module.mutations.length) {
+    shelljs.mkdir('-p', `${projectMainPath}/src/modules/${moduleName}/graphql/mutations`);
+    module.mutations.forEach(({ name }) => {
+      createMutation(name);
+      createMutationSpec(name);
+    });
+  }
+});
 
 const createGlobalResolvers = () => {
-  const template = fs.readFileSync(path.join(__dirname, './templates/resolvers.handlebars'), 'utf8');
-  const context = { modules: [{ name: 'Inventory' }] };
-  // const context = { types: true, queries: [{name: "myQuery"}], mutations: [{name: "myMutation"}], moduleName };
-  const generateIndex = () => Handlebars.compile(template)(context);
-
-  fs.writeFileSync(path.join(`${projectMainPath}/src/graphql/`, `resolvers.ts`), generateIndex());
+  const templateName = './templates/resolvers.handlebars';
+  const context = { modules };
+  const filePath = `${projectMainPath}/src/graphql/`;
+  const fileName = `resolvers.ts`;
+  saveRenderedTemplate(templateName, context, filePath, fileName);
 };
 
 createGlobalResolvers();
 
 const createCombineSchemas = () => {
-  const template = fs.readFileSync(path.join(__dirname, './templates/combineSchemas.handlebars'), 'utf8');
+  const templateName = './templates/combineSchemas.handlebars';
   const context = { modules };
-  // const context = { types: true, queries: [{name: "myQuery"}], mutations: [{name: "myMutation"}], moduleName };
-  const generateIndex = () => Handlebars.compile(template)(context);
-
-  fs.writeFileSync(path.join(`${projectMainPath}/src/graphql/helpers`, `combineSchemas.ts`), generateIndex());
+  const filePath = `${projectMainPath}/src/graphql/helpers`;
+  const fileName = `combineSchemas.ts`;
+  saveRenderedTemplate(templateName, context, filePath, fileName);
 };
 
 createCombineSchemas();
 
 const createTypes = () => {
-  const template = fs.readFileSync(path.join(__dirname, './templates/types.handlebars'), 'utf8');
+  const templateName = './templates/types.handlebars';
   const context = { modules };
-  // const context = { types: true, queries: [{name: "myQuery"}], mutations: [{name: "myMutation"}], moduleName };
-  const generateIndex = () => Handlebars.compile(template)(context);
-
-  fs.writeFileSync(path.join(`${projectMainPath}/src/`, `types.ts`), generateIndex());
+  const filePath = `${projectMainPath}/src/`;
+  const fileName = `types.ts`;
+  saveRenderedTemplate(templateName, context, filePath, fileName);
 };
 
 createTypes();
 
 const createStartupConfig = () => {
-  const template = fs.readFileSync(path.join(__dirname, './templates/startupConfig.handlebars'), 'utf8');
+  const templateName = './templates/startupConfig.handlebars';
   const context = { modules };
-  // const context = { types: true, queries: [{name: "myQuery"}], mutations: [{name: "myMutation"}], moduleName };
-  const generateIndex = () => Handlebars.compile(template)(context);
-
-  fs.writeFileSync(path.join(`${projectMainPath}/src/`, `startupConfig.ts`), generateIndex());
+  const filePath = `${projectMainPath}/src/`;
+  const fileName = `startupConfig.ts`;
+  saveRenderedTemplate(templateName, context, filePath, fileName);
 };
 
 createStartupConfig();
 
 const createIModuleNameContexts = () => {
-  const template = fs.readFileSync(path.join(__dirname, './templates/IModuleNameContext.handlebars'), 'utf8');
-
   modules.forEach(({ name }) => {
+    const templateName = './templates/IModuleNameContext.handlebars';
     const context = { moduleName: name };
+    const filePath = `${projectMainPath}/src/modules/${name}/`;
+    const fileName = `I${name}Context.ts`;
+    const keepIfExists = true;
 
-    const generateIndex = () => Handlebars.compile(template)(context);
-
-    fs.writeFileSync(path.join(`${projectMainPath}/src/modules/${name}/`, `I${name}Context.ts`), generateIndex());
+    saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
   });
 };
 
 createIModuleNameContexts();
 
 const createGetModuleNameContexts = () => {
-  const template = fs.readFileSync(path.join(__dirname, './templates/getModuleNameContext.handlebars'), 'utf8');
-
   modules.forEach(({ name }) => {
+    const templateName = './templates/getModuleNameContext.handlebars';
     const context = { moduleName: name };
+    const filePath = `${projectMainPath}/src/modules/${name}/`;
+    const fileName = `get${name}Context.ts`;
+    const keepIfExists = true;
 
-    const generateIndex = () => Handlebars.compile(template)(context);
-
-    fs.writeFileSync(path.join(`${projectMainPath}/src/modules/${name}/`, `get${name}Context.ts`), generateIndex());
+    saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
   });
 };
 
 createGetModuleNameContexts();
+// typeResolvers.handlebars
+
+
+const createTypeResolvers = () => {
+  modules.forEach(({ name, typeDefinitions, types }) => {
+    if (types) {
+      shelljs.mkdir('-p', `${projectMainPath}/src/modules/${name}/graphql/types/`);
+      const templateName = './templates/typeResolvers.handlebars';
+      const context = { type: typeDefinitions };
+      const filePath = `${projectMainPath}/src/modules/${name}/graphql/types/`;
+      const fileName = `typeResolvers.ts`;
+      const keepIfExists = false;
+
+      saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
+      typeDefinitions.forEach((typeDef) => {
+        const templateName = './templates/typeTypeResolvers.handlebars';
+        const context = { typeName: typeDef.name };
+        const filePath = `${projectMainPath}/src/modules/${name}/graphql/types/`;
+        const fileName = `${typeDef.name}TypeResolvers.ts`;
+        const keepIfExists = true;
+
+        saveRenderedTemplate(templateName, context, filePath, fileName, keepIfExists);
+      });
+    }
+
+  });
+};
+
+createTypeResolvers();
+

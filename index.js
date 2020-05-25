@@ -180,3 +180,4 @@ const rootTemplate = fs.readFileSync(path.join(__dirname, './root.handlebars'), 
 const generateIndex = () => Handlebars.compile(rootTemplate)(templateContext);
 
 fs.writeFileSync(path.join(destDirPath, 'index.ts'), generateIndex());
+require("./generateModule")

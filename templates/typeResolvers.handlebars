@@ -1,0 +1,7 @@
+{{#each type}}import { {{name}}TypeResolvers } from "./{{name}}TypeResolvers";{{/each}}
+
+export const typeResolvers = {
+{{#each type}}
+{{name}}: {{name}}TypeResolvers,
+{{/each}}
+};
