@@ -95,16 +95,6 @@ const createGlobalResolvers = () => {
 
 createGlobalResolvers();
 
-const createCombineSchemas = () => {
-  const templateName = './templates/combineSchemas.handlebars';
-  const context = { modules };
-  const filePath = `${projectMainPath}/src/graphql/helpers`;
-  const fileName = `combineSchemas.ts`;
-  saveRenderedTemplate(templateName, context, filePath, fileName);
-};
-
-createCombineSchemas();
-
 const createTypes = () => {
   const templateName = './templates/types.handlebars';
   const context = { modules };
