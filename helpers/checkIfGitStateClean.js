@@ -41,7 +41,7 @@ module.exports = function checkIfGitStateClean() {
   const status = statusSync(currentPath);
 
   if (status.changed && !process.env.IGNORE_GIT) {
-    console.error(`We are about to generate and modify some code, but you have ${status.dirty} modified and ${status.changed} files. We are counting only files in src/ and excluding .graphql.
+    console.error(`We are about to generate and modify some code, but you have ${status.dirty} modified and ${status.untracked} files. We are counting only files in src/ and excluding .graphql.
   To make sure you can easily verify and revert the changes introduced by this tool, please commit or stash the existing changes.
   If you want to ignore this warning run the tooling with IGNORE_GIT=true. This is STRONGLY discouraged!`);
     process.exit(2);
