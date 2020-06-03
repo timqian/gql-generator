@@ -24,10 +24,5 @@ import merge from "lodash/merge";
 
 export const resolvers = merge(
 {},
-{
-Query: {
-healthcheck: () => "All good!",
-},
-},
 {{#each modules}}{{name}}Resolvers,{{/each}}
 );
