@@ -5,9 +5,6 @@ const path = require('path');
 
 const EOL = /\r?\n/;
 
-const isGitSync = function isGitSync(dir) {
-  return fs.existsSync(path.join(dir, '.git'));
-};
 const statusSync = function (repo, opts) {
   opts = opts || {};
   const stdout = execSync('git status -s', {
@@ -31,12 +28,6 @@ const statusSync = function (repo, opts) {
 
 module.exports = function checkIfGitStateClean() {
   const currentPath = process.cwd();
-
-  const isGit = isGitSync(currentPath);
-  if (!isGit) {
-    console.error(`something wrong, we couldn't verify that path ${currentPath} is the root of a git repository`);
-    process.exit(1);
-  }
 
   const status = statusSync(currentPath);
 
