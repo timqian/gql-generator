@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+const { buildFederatedSchema } = require('@apollo/federation');
+const gql = require('graphql-tag');
+
 const fs = require('fs');
 const path = require('path');
 const program = require('commander');
-const { Source, buildSchema } = require('graphql');
 const del = require('del');
 
 program
@@ -12,29 +14,35 @@ program
   .option('--typesPath [value]', 'path to your generated typescript file with GraphQL Types')
   .parse(process.argv);
 
-
-
-
-console.log()
+console.log();
 const { schemaFilePath, destDirPath, typesPath, depthLimit = 100 } = program;
 
-let pathToDestDir = `${process.cwd()}${destDirPath}`;
-let pathToTypes = `${process.cwd()}${typesPath}`;
+const pathToDestDir = `${process.cwd()}${destDirPath}`;
+const pathToTypes = `${process.cwd()}${typesPath}`;
 const typesRelativePathWithExtension = path.relative(pathToDestDir, pathToTypes);
-const typesRelativePath = typesRelativePathWithExtension.replace(path.extname(typesRelativePathWithExtension), "");
+const typesRelativePath = typesRelativePathWithExtension.replace(path.extname(typesRelativePathWithExtension), '');
 
 const typeDef = fs.readFileSync(schemaFilePath);
-const source = new Source(typeDef);
-const gqlSchema = buildSchema(source);
+
+const gqlSchema = buildFederatedSchema([
+  {
+    typeDefs: gql`
+      ${typeDef}
+    `,
+  },
+]);
 
 del.sync(destDirPath);
-path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
-  const pathTmp = path.join(before, cur + path.sep);
-  if (!fs.existsSync(pathTmp)) {
-    fs.mkdirSync(pathTmp);
-  }
-  return path.join(before, cur + path.sep);
-}, '');
+path
+  .resolve(destDirPath)
+  .split(path.sep)
+  .reduce((before, cur) => {
+    const pathTmp = path.join(before, cur + path.sep);
+    if (!fs.existsSync(pathTmp)) {
+      fs.mkdirSync(pathTmp);
+    }
+    return path.join(before, cur + path.sep);
+  }, '');
 
 /**
  * Generate the query for the specified field
@@ -51,7 +59,7 @@ const generateQuery = (
   curParentName,
   argumentList = [],
   crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
-  curDepth = 1,
+  curDepth = 1
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
   const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
@@ -65,10 +73,8 @@ const generateQuery = (
     crossReferenceKeyList.push(crossReferenceKey);
     const childKeys = Object.keys(curType.getFields());
     childQuery = childKeys
-      .map(cur => generateQuery(
-        cur, curType, curName, argumentList, crossReferenceKeyList, curDepth + 1,
-      ).queryStr)
-      .filter(cur => cur)
+      .map((cur) => generateQuery(cur, curType, curName, argumentList, crossReferenceKeyList, curDepth + 1).queryStr)
+      .filter((cur) => cur)
       .join('\n');
   }
 
@@ -76,7 +82,7 @@ const generateQuery = (
     queryStr = `${'    '.repeat(curDepth)}${field.name}`;
     if (field.args.length > 0) {
       argumentList.push(...field.args);
-      const argsStr = field.args.map(arg => `${arg.name}: $${arg.name}`).join(', ');
+      const argsStr = field.args.map((arg) => `${arg.name}: $${arg.name}`).join(', ');
       queryStr += `(${argsStr})`;
     }
     if (childQuery) {
@@ -96,10 +102,10 @@ const generateQuery = (
         const valueTypeName = types[i];
         const valueType = gqlSchema.getType(valueTypeName);
         const unionChildQuery = Object.keys(valueType.getFields())
-          .map(cur => generateQuery(
-            cur, valueType, curName, argumentList, crossReferenceKeyList, curDepth + 2,
-          ).queryStr)
-          .filter(cur => cur)
+          .map(
+            (cur) => generateQuery(cur, valueType, curName, argumentList, crossReferenceKeyList, curDepth + 2).queryStr
+          )
+          .filter((cur) => cur)
           .join('\n');
         queryStr += `${fragIndent}... on ${valueTypeName} {\n${unionChildQuery}\n${fragIndent}}\n`;
       }
@@ -117,7 +123,7 @@ const templateContext = { mutations: [], queries: [], subscriptions: [], pathToT
  * @param description description of the current object
  */
 const generateFile = (obj, description) => {
-  let indexJs = 'import gql from "graphql-tag";\nconst fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
+  let indexJs = "import gql from \"graphql-tag\";\nconst fs = require('fs');\nconst path = require('path');\n\n";
   let outputFolderName;
   switch (description) {
     case 'Mutation':
@@ -134,20 +140,23 @@ const generateFile = (obj, description) => {
   }
   const writeFolder = path.join(destDirPath, `./${outputFolderName}`);
   fs.mkdirSync(writeFolder);
-  Object.keys(obj).forEach((type) => {
-    const queryResult = generateQuery(type, description);
-    let query = queryResult.queryStr;
-    const field = gqlSchema.getType(description).getFields()[type];
-    const args = field.args.concat(queryResult.argumentList);
-    const argStr = args
-      .filter((item, pos) => args.indexOf(item) === pos)
-      .map(arg => `$${arg.name}: ${arg.type}`)
-      .join(', ');
-    query = `${description.toLowerCase()} ${type}${argStr ? `(${argStr})` : ''}{\n${query}\n}`;
-    fs.writeFileSync(path.join(writeFolder, `./${type}.graphql`), query);
-    indexJs += `export const ${type} = gql\`$\{fs.readFileSync(path.join(__dirname, '${type}.graphql'), 'utf8')}\`;\n`;
-    templateContext[outputFolderName].push({ name: type, hasVariables: !!argStr });
-  });
+  Object.keys(obj)
+    .filter((t) => t !== '_entities' && t !== '_service')
+    .forEach((type) => {
+      console.log(type);
+      const queryResult = generateQuery(type, description);
+      let query = queryResult.queryStr;
+      const field = gqlSchema.getType(description).getFields()[type];
+      const args = field.args.concat(queryResult.argumentList);
+      const argStr = args
+        .filter((item, pos) => args.indexOf(item) === pos)
+        .map((arg) => `$${arg.name}: ${arg.type}`)
+        .join(', ');
+      query = `${description.toLowerCase()} ${type}${argStr ? `(${argStr})` : ''}{\n${query}\n}`;
+      fs.writeFileSync(path.join(writeFolder, `./${type}.graphql`), query);
+      indexJs += `export const ${type} = gql\`$\{fs.readFileSync(path.join(__dirname, '${type}.graphql'), 'utf8')}\`;\n`;
+      templateContext[outputFolderName].push({ name: type, hasVariables: !!argStr });
+    });
   fs.writeFileSync(path.join(writeFolder, 'index.ts'), indexJs);
 };
 
@@ -170,9 +179,9 @@ if (gqlSchema.getSubscriptionType()) {
 }
 const Handlebars = require('handlebars');
 
-Handlebars.registerHelper('toUpperCase', function(s) {
-  if (typeof s !== 'string') return ''
-  return s.charAt(0).toUpperCase() + s.slice(1)
+Handlebars.registerHelper('toUpperCase', function (s) {
+  if (typeof s !== 'string') return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
 });
 
 const rootTemplate = fs.readFileSync(path.join(__dirname, './root.handlebars'), 'utf8');
@@ -180,4 +189,4 @@ const rootTemplate = fs.readFileSync(path.join(__dirname, './root.handlebars'), 
 const generateIndex = () => Handlebars.compile(rootTemplate)(templateContext);
 
 fs.writeFileSync(path.join(destDirPath, 'index.ts'), generateIndex());
-require("./generateModule")
+require('./generateModule');
