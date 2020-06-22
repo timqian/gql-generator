@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { buildFederatedSchema } = require('@apollo/federation');
+const { Source, buildSchema } = require('graphql');
 const gql = require('graphql-tag');
 
 const fs = require('fs');
@@ -24,13 +24,21 @@ const typesRelativePath = typesRelativePathWithExtension.replace(path.extname(ty
 
 const typeDef = fs.readFileSync(schemaFilePath);
 
-const gqlSchema = buildFederatedSchema([
-  {
-    typeDefs: gql`
-      ${typeDef}
-    `,
-  },
-]);
+let gqlSchema
+try {
+  const source = new Source(typeDef);
+  gqlSchema = buildSchema(source);
+} catch(e) {
+  const { buildFederatedSchema } = require('@apollo/federation');
+
+  gqlSchema = buildFederatedSchema([
+    {
+      typeDefs: gql`
+        ${typeDef}
+      `,
+    },
+  ]);
+}
 
 del.sync(destDirPath);
 path

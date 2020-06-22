@@ -1,6 +1,6 @@
 {
   "name": "gql-typescript-generator",
-  "version": "6.1.0",
+  "version": "7.1.0",
   "description": "",
   "main": "index.js",
   "bin": {
@@ -26,7 +26,6 @@
   },
   "homepage": "https://github.com/TheBrainFamily/gql-typescript-generator#readme",
   "dependencies": {
-    "@apollo/federation": "^0.16.2",
     "commander": "^2.15.1",
     "del": "^3.0.0",
     "find-package-json": "^1.2.0",
