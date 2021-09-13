@@ -54,7 +54,7 @@ type User {
     address: String! @deprecated(reason: "Test a deprecated field")
 }
 
-union UserDetails = Guest | Member
+union UserDetails = Guest | Member | Premium
 
 type Guest {
     region(language: String): String!
@@ -62,6 +62,20 @@ type Guest {
 
 type Member {
     address: String!
+}
+
+type Premium {
+    location: String!
+    card: Card!
+}
+
+type Card {
+    number: String!
+    type: [CardType!]!
+}
+
+type CardType {
+    key: String!
 }
 
 type Context {
