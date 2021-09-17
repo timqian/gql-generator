@@ -12,8 +12,10 @@ program
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
   .parse(process.argv);
 
-const { schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false } = program;
-const typeDef = fs.readFileSync(schemaFilePath, "utf-8");
+const {
+  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false,
+} = program;
+const typeDef = fs.readFileSync(schemaFilePath, 'utf-8');
 const source = new Source(typeDef);
 const gqlSchema = buildSchema(source);
 
@@ -76,6 +78,7 @@ const getVarsToTypesStr = dict => Object.entries(dict)
  * @param duplicateArgCounts map for deduping argument name collisions
  * @param crossReferenceKeyList list of the cross reference
  * @param curDepth current depth of field
+ * @param fromUnion adds additional depth for unions to avoid empty child
  */
 const generateQuery = (
   curName,
@@ -85,6 +88,7 @@ const generateQuery = (
   duplicateArgCounts = {},
   crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
   curDepth = 1,
+  fromUnion = false,
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
   const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
@@ -94,18 +98,20 @@ const generateQuery = (
 
   if (curType.getFields) {
     const crossReferenceKey = `${curParentName}To${curName}Key`;
-    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || curDepth > depthLimit) return '';
-    crossReferenceKeyList.push(crossReferenceKey);
+    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || (fromUnion ? curDepth - 2 : curDepth) > depthLimit) return '';
+    if (!fromUnion) {
+      crossReferenceKeyList.push(crossReferenceKey);
+    }
     const childKeys = Object.keys(curType.getFields());
     childQuery = childKeys
-      .filter(fieldName => {
+      .filter((fieldName) => {
         /* Exclude deprecated fields */
         const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
         return includeDeprecatedFields || !fieldSchema.isDeprecated;
       })
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-        crossReferenceKeyList, curDepth + 1).queryStr)
-      .filter(cur => cur)
+        crossReferenceKeyList, curDepth + 1, fromUnion).queryStr)
+      .filter(cur => Boolean(cur))
       .join('\n');
   }
 
@@ -134,10 +140,14 @@ const generateQuery = (
         const valueType = gqlSchema.getType(valueTypeName);
         const unionChildQuery = Object.keys(valueType.getFields())
           .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-            crossReferenceKeyList, curDepth + 2).queryStr)
-          .filter(cur => cur)
+            crossReferenceKeyList, curDepth + 2, true).queryStr)
+          .filter(cur => Boolean(cur))
           .join('\n');
-        queryStr += `${fragIndent}... on ${valueTypeName} {\n${unionChildQuery}\n${fragIndent}}\n`;
+
+        /* Exclude empty unions */
+        if (unionChildQuery) {
+          queryStr += `${fragIndent}... on ${valueTypeName} {\n${unionChildQuery}\n${fragIndent}}\n`;
+        }
       }
       queryStr += `${indent}}`;
     }
@@ -170,7 +180,7 @@ const generateFile = (obj, description) => {
   try {
     fs.mkdirSync(writeFolder);
   } catch (err) {
-    if (err.code !== 'EEXIST') throw err
+    if (err.code !== 'EEXIST') throw err;
   }
   Object.keys(obj).forEach((type) => {
     const field = gqlSchema.getType(description).getFields()[type];
