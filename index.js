@@ -9,11 +9,12 @@ program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
+  .option('--ext [value]', 'extension file to use', 'gql')
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
   .parse(process.argv);
 
 const {
-  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false,
+  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, ext: fileExtension,
 } = program;
 const typeDef = fs.readFileSync(schemaFilePath, 'utf-8');
 const source = new Source(typeDef);
@@ -190,8 +191,8 @@ const generateFile = (obj, description) => {
       const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
       let query = queryResult.queryStr;
       query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
-      fs.writeFileSync(path.join(writeFolder, `./${type}.gql`), query);
-      indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.gql'), 'utf8');\n`;
+      fs.writeFileSync(path.join(writeFolder, `./${type}.${fileExtension}`), query);
+      indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.${fileExtension}'), 'utf8');\n`;
     }
   });
   fs.writeFileSync(path.join(writeFolder, 'index.js'), indexJs);
