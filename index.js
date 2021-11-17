@@ -80,6 +80,7 @@ const getVarsToTypesStr = dict => Object.entries(dict)
  * @param crossReferenceKeyList list of the cross reference
  * @param curDepth current depth of field
  * @param fromUnion adds additional depth for unions to avoid empty child
+ * @param parents a set of previous parent names used to avoid cycles
  */
 const generateQuery = (
   curName,
@@ -90,12 +91,18 @@ const generateQuery = (
   crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
   curDepth = 1,
   fromUnion = false,
+  parents = new Set(),
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
   const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
   const curType = gqlSchema.getType(curTypeName);
   let queryStr = '';
   let childQuery = '';
+
+  /* Avoid cycles */
+  if (parents.has(curName)) {
+    return {queryStr, argumentsDict}
+  } 
 
   if (curType.getFields) {
     const crossReferenceKey = `${curParentName}To${curName}Key`;
@@ -111,7 +118,7 @@ const generateQuery = (
         return includeDeprecatedFields || !fieldSchema.isDeprecated;
       })
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-        crossReferenceKeyList, curDepth + 1, fromUnion).queryStr)
+        crossReferenceKeyList, curDepth + 1, fromUnion, new Set([...parents, curName])).queryStr)
       .filter(cur => Boolean(cur))
       .join('\n');
   }
@@ -141,7 +148,7 @@ const generateQuery = (
         const valueType = gqlSchema.getType(valueTypeName);
         const unionChildQuery = Object.keys(valueType.getFields())
           .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-            crossReferenceKeyList, curDepth + 2, true).queryStr)
+            crossReferenceKeyList, curDepth + 2, true, new Set([...parents, curName])).queryStr)
           .filter(cur => Boolean(cur))
           .join('\n');
 
