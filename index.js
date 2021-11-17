@@ -11,10 +11,11 @@ program
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
   .option('--ext [value]', 'extension file to use', 'gql')
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
+  .option('-C, --avoidCycles [value]', 'Flag to avoid cycles in the generated queries (The default is set to false)')
   .parse(process.argv);
 
 const {
-  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, ext: fileExtension,
+  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, ext: fileExtension, avoidCycles = false
 } = program;
 const typeDef = fs.readFileSync(schemaFilePath, 'utf-8');
 const source = new Source(typeDef);
@@ -100,7 +101,7 @@ const generateQuery = (
   let childQuery = '';
 
   /* Avoid cycles */
-  if (parents.has(curName)) {
+  if (avoidCycles && parents.has(curName)) {
     return {queryStr, argumentsDict}
   } 
 
@@ -117,8 +118,11 @@ const generateQuery = (
         const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
         return includeDeprecatedFields || !fieldSchema.isDeprecated;
       })
-      .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-        crossReferenceKeyList, curDepth + 1, fromUnion, new Set([...parents, curName])).queryStr)
+      .map(cur => 
+        avoidCycles 
+        ? generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts, crossReferenceKeyList, curDepth + 1, fromUnion, new Set([...parents, curName])).queryStr 
+        : generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts, crossReferenceKeyList, curDepth + 1, fromUnion).queryStr
+      )
       .filter(cur => Boolean(cur))
       .join('\n');
   }
@@ -147,8 +151,11 @@ const generateQuery = (
         const valueTypeName = types[i];
         const valueType = gqlSchema.getType(valueTypeName);
         const unionChildQuery = Object.keys(valueType.getFields())
-          .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-            crossReferenceKeyList, curDepth + 2, true, new Set([...parents, curName])).queryStr)
+          .map(cur => 
+            avoidCycles 
+            ? generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts, crossReferenceKeyList, curDepth + 2, true, new Set([...parents, curName])).queryStr
+            : generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts, crossReferenceKeyList, curDepth + 2, true).queryStr
+          )
           .filter(cur => Boolean(cur))
           .join('\n');
 
