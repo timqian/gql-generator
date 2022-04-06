@@ -164,14 +164,14 @@ const generateQuery = (
 const generateFile = (obj, description) => {
   let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
   let outputFolderName;
-  switch (description) {
-    case 'Mutation':
+  switch (true) {
+    case /Mutation$/.test(description):
       outputFolderName = 'mutations';
       break;
-    case 'Query':
+    case /Query$/.test(description):
       outputFolderName = 'queries';
       break;
-    case 'Subscription':
+    case /Subscription$/.test(description):
       outputFolderName = 'subscriptions';
       break;
     default:
@@ -200,19 +200,19 @@ const generateFile = (obj, description) => {
 };
 
 if (gqlSchema.getMutationType()) {
-  generateFile(gqlSchema.getMutationType().getFields(), 'Mutation');
+  generateFile(gqlSchema.getMutationType().getFields(), gqlSchema.getMutationType().name);
 } else {
   console.log('[gqlg warning]:', 'No mutation type found in your schema');
 }
 
 if (gqlSchema.getQueryType()) {
-  generateFile(gqlSchema.getQueryType().getFields(), 'Query');
+  generateFile(gqlSchema.getQueryType().getFields(), gqlSchema.getQueryType().name);
 } else {
   console.log('[gqlg warning]:', 'No query type found in your schema');
 }
 
 if (gqlSchema.getSubscriptionType()) {
-  generateFile(gqlSchema.getSubscriptionType().getFields(), 'Subscription');
+  generateFile(gqlSchema.getSubscriptionType().getFields(), gqlSchema.getSubscriptionType().name);
 } else {
   console.log('[gqlg warning]:', 'No subscription type found in your schema');
 }
