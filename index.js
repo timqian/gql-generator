@@ -92,7 +92,7 @@ const generateQuery = (
   fromUnion = false,
 ) => {
   const field = gqlSchema.getType(curParentType).getFields()[curName];
-  const curTypeName = field.type.inspect().replace(/[[\]!]/g, '');
+  const curTypeName = field.type.toJSON().replace(/[[\]!]/g, '');
   const curType = gqlSchema.getType(curTypeName);
   let queryStr = '';
   let childQuery = '';
@@ -108,7 +108,7 @@ const generateQuery = (
       .filter((fieldName) => {
         /* Exclude deprecated fields */
         const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
-        return includeDeprecatedFields || !fieldSchema.isDeprecated;
+        return includeDeprecatedFields || !fieldSchema.deprecationReason;
       })
       .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
         crossReferenceKeyList, curDepth + 1, fromUnion).queryStr)
@@ -186,7 +186,7 @@ const generateFile = (obj, description) => {
   Object.keys(obj).forEach((type) => {
     const field = gqlSchema.getType(description).getFields()[type];
     /* Only process non-deprecated queries/mutations: */
-    if (includeDeprecatedFields || !field.isDeprecated) {
+    if (includeDeprecatedFields || !field.deprecationReason) {
       const queryResult = generateQuery(type, description);
       const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
       let query = queryResult.queryStr;
