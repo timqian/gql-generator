@@ -164,14 +164,14 @@ const generateQuery = (
 const generateFile = (obj, description) => {
   let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
   let outputFolderName;
-  switch (description) {
-    case 'Mutation':
+  switch (true) {
+    case /Mutation$/.test(description):
       outputFolderName = 'mutations';
       break;
-    case 'Query':
+    case /Query$/.test(description):
       outputFolderName = 'queries';
       break;
-    case 'Subscription':
+    case /Subscription$/.test(description):
       outputFolderName = 'subscriptions';
       break;
     default:
@@ -190,7 +190,21 @@ const generateFile = (obj, description) => {
       const queryResult = generateQuery(type, description);
       const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
       let query = queryResult.queryStr;
-      query = `${description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
+      let queryName;
+      switch (true) {
+        case /Mutation/.test(description):
+          queryName = 'mutation';
+          break;
+        case /Query/.test(description):
+          queryName = 'query';
+          break;
+        case /Subscription/.test(description):
+          queryName = 'subscription';
+          break;
+        default:
+          break;
+      }
+      query = `${queryName || description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
       fs.writeFileSync(path.join(writeFolder, `./${type}.${fileExtension}`), query);
       indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.${fileExtension}'), 'utf8');\n`;
     }
@@ -200,19 +214,19 @@ const generateFile = (obj, description) => {
 };
 
 if (gqlSchema.getMutationType()) {
-  generateFile(gqlSchema.getMutationType().getFields(), 'Mutation');
+  generateFile(gqlSchema.getMutationType().getFields(), gqlSchema.getMutationType().name);
 } else {
   console.log('[gqlg warning]:', 'No mutation type found in your schema');
 }
 
 if (gqlSchema.getQueryType()) {
-  generateFile(gqlSchema.getQueryType().getFields(), 'Query');
+  generateFile(gqlSchema.getQueryType().getFields(), gqlSchema.getQueryType().name);
 } else {
   console.log('[gqlg warning]:', 'No query type found in your schema');
 }
 
 if (gqlSchema.getSubscriptionType()) {
-  generateFile(gqlSchema.getSubscriptionType().getFields(), 'Subscription');
+  generateFile(gqlSchema.getSubscriptionType().getFields(), gqlSchema.getSubscriptionType().name);
 } else {
   console.log('[gqlg warning]:', 'No subscription type found in your schema');
 }
