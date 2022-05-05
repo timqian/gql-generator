@@ -9,16 +9,23 @@ program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
   .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
+  .option('--assumeValid [value]', 'assume the SDL is valid(The default is false)')
   .option('--ext [value]', 'extension file to use', 'gql')
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
   .parse(process.argv);
 
 const {
-  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, ext: fileExtension,
+  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, ext: fileExtension, assumeValid
 } = program;
+
+let assume = false
+if(assumeValid === "true") {
+    assume = true
+}
+
 const typeDef = fs.readFileSync(schemaFilePath, 'utf-8');
 const source = new Source(typeDef);
-const gqlSchema = buildSchema(source);
+const gqlSchema = buildSchema(source, { assumeValidSDL: assume });
 
 del.sync(destDirPath);
 path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
