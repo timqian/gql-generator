@@ -109,3 +109,66 @@ test('includes nested in union types', async () => {
 }`;
   should(queries.queries.user).be.equal(expected);
 });
+
+test('includes cross reference with the --includeCrossReferences flag', async () => {
+  cp.execSync('node index.js --schemaFilePath ./example/sampleTypeDef.graphql --destDirPath ./example/output6 --depthLimit 4 --includeCrossReferences');
+  const queries = require('../example/output6');
+
+  should(typeof queries.queries.user).be.exactly('string');
+  should(queries.queries.members === undefined).be.true();
+  should(queries.mutations.sendMessage === undefined).be.true();
+
+  // The context domain field should be included multiple times
+  const expected = `query user($language: String, $language1: String, $id: Int!){
+    user(id: $id){
+        id
+        username
+        email
+        createdAt
+        context{
+            user{
+                id
+                username
+                email
+                createdAt
+                context{
+                    domain
+                }
+                details{
+                    ... on Guest {
+                        region(language: $language)
+                    }
+                    ... on Member {
+                        address
+                    }
+                    ... on Premium {
+                        location
+                        card{
+                            number
+                        }
+                    }
+                }
+            }
+            domain
+        }
+        details{
+            ... on Guest {
+                region(language: $language1)
+            }
+            ... on Member {
+                address
+            }
+            ... on Premium {
+                location
+                card{
+                    number
+                    type{
+                        key
+                    }
+                }
+            }
+        }
+    }
+}`;
+  should(queries.queries.user).be.equal(expected);
+});
