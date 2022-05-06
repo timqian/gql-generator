@@ -8,19 +8,26 @@ const del = require('del');
 program
   .option('--schemaFilePath [value]', 'path of your graphql schema file')
   .option('--destDirPath [value]', 'dir you want to store the generated queries')
-  .option('--depthLimit [value]', 'query depth you want to limit(The default is 100)')
-  .option('--assumeValid [value]', 'assume the SDL is valid(The default is false)')
+  .option('--depthLimit [value]', 'query depth you want to limit (The default is 100)')
+  .option('--assumeValid [value]', 'assume the SDL is valid (The default is false)')
   .option('--ext [value]', 'extension file to use', 'gql')
   .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
+  .option('-R, --includeCrossReferences', 'Flag to include fields that have been added to parent queries already (The default is to exclude)')
   .parse(process.argv);
 
 const {
-  schemaFilePath, destDirPath, depthLimit = 100, includeDeprecatedFields = false, ext: fileExtension, assumeValid
+  schemaFilePath,
+  destDirPath,
+  depthLimit = 100,
+  includeDeprecatedFields = false,
+  ext: fileExtension,
+  assumeValid,
+  includeCrossReferences = false,
 } = program;
 
-let assume = false
-if(assumeValid === "true") {
-    assume = true
+let assume = false;
+if (assumeValid === 'true') {
+  assume = true;
 }
 
 const typeDef = fs.readFileSync(schemaFilePath, 'utf-8');
@@ -106,7 +113,12 @@ const generateQuery = (
 
   if (curType.getFields) {
     const crossReferenceKey = `${curParentName}To${curName}Key`;
-    if (crossReferenceKeyList.indexOf(crossReferenceKey) !== -1 || (fromUnion ? curDepth - 2 : curDepth) > depthLimit) return '';
+    if (
+      (!includeCrossReferences && crossReferenceKeyList.indexOf(crossReferenceKey) !== -1)
+      || (fromUnion ? curDepth - 2 : curDepth) > depthLimit
+    ) {
+      return '';
+    }
     if (!fromUnion) {
       crossReferenceKeyList.push(crossReferenceKey);
     }
