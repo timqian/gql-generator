@@ -133,6 +133,8 @@ const generateQuery = (
         crossReferenceKeyList, curDepth + 1, fromUnion).queryStr)
       .filter(cur => Boolean(cur))
       .join('\n');
+    // Allow the same references in siblings 
+    crossReferenceKeyList.pop();
   }
 
   if (!(curType.getFields && !childQuery)) {
