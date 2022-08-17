@@ -74,6 +74,16 @@ mutation signup($username: String!, email: String!, password: String!){
 
 The tool will automatically exclude any `@deprecated` schema fields (see more on schema directives [here](https://www.apollographql.com/docs/graphql-tools/schema-directives)). To change this behavior to include deprecated fields you can use the `includeDeprecatedFields` flag when running the tool, e.g. `gqlg --includeDeprecatedFields`.
 
+### Programmatic Access
+
+Alternatively, you can run `gql-generator` directly from your scripts:
+
+```js
+const gqlg = require('gql-generator')
+
+gqlg({ schemaFilePath: './example/sampleTypeDef.graphql', destDirPath: './example/output', depthLimit: 5 })
+```
+
 ## Usage example
 
 Say you have a graphql schema like this: 
