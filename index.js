@@ -173,13 +173,13 @@ function main ({
     let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
     let outputFolderName;
     switch (true) {
-      case /Mutation$/.test(description):
+      case /Mutation.*$/.test(description):
         outputFolderName = 'mutations';
         break;
-      case /Query$/.test(description):
+      case /Query.*$/.test(description):
         outputFolderName = 'queries';
         break;
-      case /Subscription$/.test(description):
+      case /Subscription.*$/.test(description):
         outputFolderName = 'subscriptions';
         break;
       default:
