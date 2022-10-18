@@ -143,6 +143,7 @@ function main ({
         const indent = `${'    '.repeat(curDepth)}`;
         const fragIndent = `${'    '.repeat(curDepth + 1)}`;
         queryStr += '{\n';
+        queryStr += `${fragIndent}__typename\n`
 
         for (let i = 0, len = types.length; i < len; i++) {
           const valueTypeName = types[i];

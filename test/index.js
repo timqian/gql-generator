@@ -27,6 +27,7 @@ test('excludes deprecated fields by default', async () => {
         email
         createdAt
         details{
+            __typename
             ... on Guest {
                 region(language: $language)
             }
@@ -58,6 +59,7 @@ test('includes deprecated fields with includeDeprecatedFields flag', async () =>
         email
         createdAt
         details{
+            __typename
             ... on Guest {
                 region(language: $language)
             }
@@ -92,6 +94,7 @@ test('includes nested in union types', async () => {
             domain
         }
         details{
+            __typename
             ... on Guest {
                 region(language: $language)
             }
@@ -135,6 +138,7 @@ test('includes cross reference with the --includeCrossReferences flag', async ()
                     domain
                 }
                 details{
+                    __typename
                     ... on Guest {
                         region(language: $language)
                     }
@@ -152,6 +156,7 @@ test('includes cross reference with the --includeCrossReferences flag', async ()
             domain
         }
         details{
+            __typename
             ... on Guest {
                 region(language: $language1)
             }
