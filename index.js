@@ -175,12 +175,15 @@ function main ({
     let outputFolderName;
     switch (true) {
       case /Mutation.*$/.test(description):
+      case /mutation.*$/.test(description):
         outputFolderName = 'mutations';
         break;
       case /Query.*$/.test(description):
+      case /query.*$/.test(description):
         outputFolderName = 'queries';
         break;
       case /Subscription.*$/.test(description):
+      case /subscription.*$/.test(description):
         outputFolderName = 'subscriptions';
         break;
       default:
@@ -202,12 +205,15 @@ function main ({
         let queryName;
         switch (true) {
           case /Mutation/.test(description):
+          case /mutation/.test(description):
             queryName = 'mutation';
             break;
           case /Query/.test(description):
+          case /query/.test(description):
             queryName = 'query';
             break;
           case /Subscription/.test(description):
+          case /subscription/.test(description):
             queryName = 'subscription';
             break;
           default:
