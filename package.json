@@ -1,6 +1,6 @@
 {
   "name": "gql-generator",
-  "version": "1.0.19",
+  "version": "2.0.0",
   "description": "",
   "main": "index.js",
   "bin": {
@@ -26,15 +26,18 @@
   },
   "homepage": "https://github.com/timqian/gql-generator#readme",
   "dependencies": {
-    "commander": "^2.15.1",
-    "del": "^3.0.0",
-    "graphql": "^16.3.0"
+    "commander": "^11.1.0",
+    "graphql": "^16.8.1",
+    "rimraf": "^5.0.5"
   },
   "devDependencies": {
-    "eslint": "^5.5.0",
-    "eslint-config-airbnb-base": "^13.1.0",
-    "eslint-plugin-import": "^2.14.0",
-    "mocha": "^10.1.0",
-    "should": "^13.2.1"
+    "eslint": "^8.56.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "mocha": "^10.2.0",
+    "should": "^13.2.3"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -3,9 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const program = require('commander');
 const { Source, buildSchema } = require('graphql');
-const del = require('del');
+const { rimrafSync } = require('rimraf');
 
-function main ({
+function main({
   schemaFilePath,
   destDirPath,
   depthLimit = 100,
@@ -23,7 +23,7 @@ function main ({
   const source = new Source(typeDef);
   const gqlSchema = buildSchema(source, { assumeValidSDL: assume });
 
-  del.sync(destDirPath);
+  rimrafSync(destDirPath);
   path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
     const pathTmp = path.join(before, cur + path.sep);
     if (!fs.existsSync(pathTmp)) {
@@ -61,7 +61,7 @@ function main ({
    * Generate variables string
    * @param dict dictionary of arguments
    */
-  const getArgsToVarsStr = dict => Object.entries(dict)
+  const getArgsToVarsStr = (dict) => Object.entries(dict)
     .map(([varName, arg]) => `${arg.name}: $${varName}`)
     .join(', ');
 
@@ -69,7 +69,7 @@ function main ({
    * Generate types string
    * @param dict dictionary of arguments
    */
-  const getVarsToTypesStr = dict => Object.entries(dict)
+  const getVarsToTypesStr = (dict) => Object.entries(dict)
     .map(([varName, arg]) => `$${varName}: ${arg.type}`)
     .join(', ');
 
@@ -108,9 +108,7 @@ function main ({
       ) {
         return '';
       }
-      if (!fromUnion) {
-        crossReferenceKeyList.push(crossReferenceKey);
-      }
+      crossReferenceKeyList.push(crossReferenceKey);
       const childKeys = Object.keys(curType.getFields());
       childQuery = childKeys
         .filter((fieldName) => {
@@ -118,9 +116,17 @@ function main ({
           const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
           return includeDeprecatedFields || !fieldSchema.deprecationReason;
         })
-        .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-          crossReferenceKeyList, curDepth + 1, fromUnion).queryStr)
-        .filter(cur => Boolean(cur))
+        .map((cur) => generateQuery(
+          cur,
+          curType,
+          curName,
+          argumentsDict,
+          duplicateArgCounts,
+          crossReferenceKeyList,
+          curDepth + 1,
+          fromUnion,
+        ).queryStr)
+        .filter((cur) => Boolean(cur))
         .join('\n');
     }
 
@@ -143,15 +149,23 @@ function main ({
         const indent = `${'    '.repeat(curDepth)}`;
         const fragIndent = `${'    '.repeat(curDepth + 1)}`;
         queryStr += '{\n';
-        queryStr += `${fragIndent}__typename\n`
+        queryStr += `${fragIndent}__typename\n`;
 
         for (let i = 0, len = types.length; i < len; i++) {
           const valueTypeName = types[i];
           const valueType = gqlSchema.getType(valueTypeName);
           const unionChildQuery = Object.keys(valueType.getFields())
-            .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-              crossReferenceKeyList, curDepth + 2, true).queryStr)
-            .filter(cur => Boolean(cur))
+            .map((cur) => generateQuery(
+              cur,
+              valueType,
+              curName,
+              argumentsDict,
+              duplicateArgCounts,
+              crossReferenceKeyList,
+              curDepth + 2,
+              true,
+            ).queryStr)
+            .filter((cur) => Boolean(cur))
             .join('\n');
 
           /* Exclude empty unions */
@@ -249,10 +263,11 @@ function main ({
   fs.writeFileSync(path.join(destDirPath, 'index.js'), indexJsExportAll);
 }
 
-module.exports = main
+module.exports = main;
 
 if (require.main === module) {
   program
+    .name('gqlg')
     .option('--schemaFilePath [value]', 'path of your graphql schema file')
     .option('--destDirPath [value]', 'dir you want to store the generated queries')
     .option('--depthLimit [value]', 'query depth you want to limit (The default is 100)')
@@ -260,7 +275,10 @@ if (require.main === module) {
     .option('--ext [value]', 'extension file to use', 'gql')
     .option('-C, --includeDeprecatedFields [value]', 'Flag to include deprecated fields (The default is to exclude)')
     .option('-R, --includeCrossReferences', 'Flag to include fields that have been added to parent queries already (The default is to exclude)')
+    .showHelpAfterError()
     .parse(process.argv);
 
-  return main({...program, fileExtension: program.ext })
+  const { ext, ...opts } = program.opts();
+
+  main({ ...opts, fileExtension: ext });
 }
