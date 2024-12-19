@@ -10,7 +10,6 @@ function main({
   destDirPath,
   depthLimit = 100,
   includeDeprecatedFields = false,
-  fileExtension,
   assumeValid,
   includeCrossReferences = false,
 } = {}) {
@@ -31,7 +30,6 @@ function main({
     }
     return path.join(before, cur + path.sep);
   }, '');
-  let indexJsExportAll = '';
 
   /**
    * Compile arguments dictionary for a field
@@ -131,14 +129,14 @@ function main({
     }
 
     if (!(curType.getFields && !childQuery)) {
-      queryStr = `${'    '.repeat(curDepth)}${field.name}`;
+      queryStr = `${'  '.repeat(curDepth)}${field.name}`;
       if (field.args.length > 0) {
         const dict = getFieldArgsDict(field, duplicateArgCounts, argumentsDict);
         Object.assign(argumentsDict, dict);
         queryStr += `(${getArgsToVarsStr(dict)})`;
       }
       if (childQuery) {
-        queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
+        queryStr += `{\n${childQuery}\n${'  '.repeat(curDepth)}}`;
       }
     }
 
@@ -185,7 +183,7 @@ function main({
    * @param description description of the current object
    */
   const generateFile = (obj, description) => {
-    let indexJs = 'const fs = require(\'fs\');\nconst path = require(\'path\');\n\n';
+    let indexTs = '';
     let outputFolderName;
     switch (true) {
       case /Mutation.*$/.test(description):
@@ -215,31 +213,32 @@ function main({
       if (includeDeprecatedFields || !field.deprecationReason) {
         const queryResult = generateQuery(type, description);
         const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
+        const queryName = queryResult.queryStr.split('{')[0].split('(')[0].replaceAll(' ', '');
         let query = queryResult.queryStr;
-        let queryName;
+        let queryType;
         switch (true) {
           case /Mutation/.test(description):
           case /mutation/.test(description):
-            queryName = 'mutation';
+            queryType = 'mutation';
             break;
           case /Query/.test(description):
           case /query/.test(description):
-            queryName = 'query';
+            queryType = 'query';
             break;
           case /Subscription/.test(description):
           case /subscription/.test(description):
-            queryName = 'subscription';
+            queryType = 'subscription';
             break;
           default:
             break;
         }
-        query = `${queryName || description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
-        fs.writeFileSync(path.join(writeFolder, `./${type}.${fileExtension}`), query);
-        indexJs += `module.exports.${type} = fs.readFileSync(path.join(__dirname, '${type}.${fileExtension}'), 'utf8');\n`;
+        const exportStatement = `export const ${queryName} = `;
+        query = `${exportStatement}\n\`${queryType || description.toLowerCase()} ${type}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}\``;
+        fs.writeFileSync(path.join(writeFolder, `./${type}.ts`), query);
+        indexTs += `export * from './${type}.ts'\n`;
       }
     });
-    fs.writeFileSync(path.join(writeFolder, 'index.js'), indexJs);
-    indexJsExportAll += `module.exports.${outputFolderName} = require('./${outputFolderName}');\n`;
+    fs.writeFileSync(path.join(writeFolder, 'index.ts'), indexTs);
   };
 
   if (gqlSchema.getMutationType()) {
@@ -259,15 +258,13 @@ function main({
   } else {
     console.log('[gqlg warning]:', 'No subscription type found in your schema');
   }
-
-  fs.writeFileSync(path.join(destDirPath, 'index.js'), indexJsExportAll);
 }
 
 module.exports = main;
 
 if (require.main === module) {
   program
-    .name('gqlg')
+    .name('gqlgts')
     .option('--schemaFilePath [value]', 'path of your graphql schema file')
     .option('--destDirPath [value]', 'dir you want to store the generated queries')
     .option('--depthLimit [value]', 'query depth you want to limit (The default is 100)')
