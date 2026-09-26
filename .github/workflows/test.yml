@@ -9,22 +9,30 @@ on:
   pull_request:
     branches: [ master ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    name: Node ${{ matrix.node-version }} / GraphQL ${{ matrix.graphql-version }}
 
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [22.x, 24.x]
+        graphql-version: [16.14.2, 17.0.2]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v7
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
+    - name: Install GraphQL ${{ matrix.graphql-version }}
+      run: npm install --no-save --package-lock=false graphql@${{ matrix.graphql-version }}
     - run: npm test
